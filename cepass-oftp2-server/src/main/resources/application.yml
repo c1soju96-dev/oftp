@@ -1,0 +1,22 @@
+server:
+  port: 8089
+  error:
+    include-exception: false
+    include-message: always
+    include-stacktrace: ON_PARAM
+    whitelabel:
+      enabled: true
+
+oftpserver:
+  serverDir: cepass-oftp2-server/src/main/resources/serverdir
+  tls :
+    active : false
+    port : 3309
+    keystorePath : cepass-oftp2-server/src/main/resources/keys/priv.jks
+    keystorePassword : "#*.cloudedi.net@"
+  non_tls:
+    port : 3309
+  auth :
+    ssid : NH_SSID
+    sfid : NH_SFID
+    password : PASS
