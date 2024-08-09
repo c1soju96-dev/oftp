@@ -5,10 +5,7 @@ import static org.neociclo.odetteftp.protocol.DefaultEndFileResponse.*;
 import static org.neociclo.odetteftp.protocol.DefaultStartFileResponse.*;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -26,16 +23,11 @@ import org.neociclo.odetteftp.oftplet.OftpletListener;
 import org.neociclo.odetteftp.oftplet.OftpletSpeaker;
 import org.neociclo.odetteftp.oftplet.StartFileResponse;
 import org.neociclo.odetteftp.protocol.AnswerReason;
-import org.neociclo.odetteftp.protocol.CommandExchangeBuffer;
 import org.neociclo.odetteftp.protocol.DefaultDeliveryNotification;
 import org.neociclo.odetteftp.protocol.DeliveryNotification;
 import org.neociclo.odetteftp.protocol.DeliveryNotification.EndResponseType;
-import org.neociclo.odetteftp.protocol.NegativeResponseReason;
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
-import org.neociclo.odetteftp.protocol.v20.DefaultSignedDeliveryNotification;
-import org.neociclo.odetteftp.protocol.v20.EnvelopedVirtualFile;
-import org.neociclo.odetteftp.protocol.v20.FileEnveloping;
 import org.neociclo.odetteftp.security.DefaultSecurityContext;
 import org.neociclo.odetteftp.security.MappedCallbackHandler;
 import org.neociclo.odetteftp.security.SecurityContext;
@@ -50,9 +42,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	private static final Logger logger = LoggerFactory.getLogger(ServerOftpletWrapper.class);
 	private static final AttributeKey CURRENT_REQUEST_ATTR = new AttributeKey(SessionHelper.class, "__obj_currentRequest");
-
 	private static final ServerRoutingWorker ROUTING_WORKER = new ServerRoutingWorker();
-	//private final OftpDataProvider oftpDataProvider;
 
 	private File serverBaseDir;
 	private OftpletEventListener listener;
@@ -67,7 +57,6 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		this.serverBaseDir = serverBaseDir;
 		this.config = config;
 		this.securityContext = new DefaultSecurityContext(securityCallbackHandler);
-		//this.oftpDataProvider = new OftpDataProvider(serverBaseDir);
 		this.listener = listener;
 	}
 
@@ -77,7 +66,6 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	@Override
 	public boolean isProtocolVersionSupported(OdetteFtpVersion version) {
-		// server that accepts downgrading the version
 		return (config != null ? config.getVersion().isEqualOrOlder(version) : super.isProtocolVersionSupported(version));
 	};
 
@@ -200,45 +188,13 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	public void onSendFileError(VirtualFile virtualFile, AnswerReasonInfo reason, boolean retryLater) {
 	}
 
-	public void onNotificationSent(DeliveryNotification notif) {
-		deleteExchange(notif);
+	public void onNotificationSent(DeliveryNotification notification) {
+		deleteExchange(notification);
 	}
 
 	// -------------------------------------------------------------------------
 	//   OftpletListener implementation
 	// -------------------------------------------------------------------------
-
-	// public StartFileResponse acceptStartFile(VirtualFile virtualFile) {
-	// 	EnvelopedVirtualFile vf = (EnvelopedVirtualFile) virtualFile;
-	// 	String homeSFID = virtualFile.getDestination();
-	// 	String remoteSSID = session.getUserCode();
-
-	// 	if (!(oftpDataProvider.existHomeSFID(remoteSSID, homeSFID))) {
-	// 		logger.error("Recipient doesn't exist: remote SSID - {}, home SFID - {}", remoteSSID, homeSFID);
-	// 		return negativeStartFileAnswer(AnswerReason.INVALID_DESTINATION,
-	// 				"Recipient [" + homeSFID + "] doesn't exist.", false);
-	// 	}
-
-	// 	if(virtualFile.getRestartOffset()>0){
-    //         try {
-    //             OdetteFtpObject re_vf = oftpDataProvider.getRestartFile(remoteSSID, homeSFID, virtualFile);
-	// 			File f = ((VirtualFile)re_vf).getFile();
-	// 			return positiveStartFileAnswer(f);
-    //         } catch (IOException e) {
-	// 			logger.error("Failed to get restart file: {}{}{} ", remoteSSID, homeSFID , createVirtualFileName(vf), e);
-	// 			return negativeStartFileAnswer(AnswerReason.ACCESS_METHOD_FAILURE, "Failed to get restart file.", false);
-    //         }
-    //     }
-
-	// 	File tmpData;
-	// 	if (vf.getEnvelopingFormat() == FileEnveloping.NO_ENVELOPE){
-	// 		tmpData = oftpDataProvider.storeData(remoteSSID, virtualFile);
-	// 	}else{
-	// 		tmpData = oftpDataProvider.storeEnvelopedData(remoteSSID, virtualFile);
-	// 	}
-
-	// 	return positiveStartFileAnswer(tmpData);
-	// }
 
 	public StartFileResponse acceptStartFile(VirtualFile vf) {
 
@@ -279,45 +235,18 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	}
 
-	// public void onReceiveFileStart(VirtualFile virtualFile, long answerCount) {
-	// 	String userCode = session.getUserCode();
-	// 	logger.info("Receiving file: {}", virtualFile);
-	// 	try {
-	// 		oftpDataProvider.storeVirtualFile(userCode, virtualFile);
-	// 	} catch (IOException e) {
-	// 		logger.error("Failed to store virtual file: " + createVirtualFileName(virtualFile), e);
-	// 	}
-
-	// }
-
-
 	public void onDataReceived(VirtualFile virtualFile, long totalOctetsReceived) {
 	}
 
 	public EndFileResponse onReceiveFileEnd(VirtualFile virtualFile, long recordCount, long unitCount) {
-
 		String userCode = session.getUserCode();
 		ROUTING_WORKER.deliver(serverBaseDir, userCode, virtualFile);
 
-		//toDO
-		DefaultDeliveryNotification notif = new DefaultDeliveryNotification(EndResponseType.END_TO_END_RESPONSE);
-		notif.setDatasetName(virtualFile.getDatasetName());
-        notif.setDateTime(new Date(virtualFile.getDateTime().getTime()));
-		notif.setTicker(virtualFile.getTicker());
-        notif.setDestination(virtualFile.getDestination());
-        notif.setOriginator(virtualFile.getOriginator());
-        notif.setUserData(virtualFile.getUserData());
-		notif.setCreator(virtualFile.getOriginator());
-      	notif.setReason((NegativeResponseReason)null);
-     	notif.setReasonText(null);
-
 		try {
-			storeNoti(notif);
-		} catch (IOException e) {
-			// TODO Auto-generated catch bloc
-			e.printStackTrace();
-		}
-		//ROUTING_WORKER.deliver(serverBaseDir, userCode, notif);
+            storeNotification(virtualFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 		return positiveEndFileAnswer(hasExchange(userCode));
 	}
@@ -327,60 +256,11 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
         return exchange;
     }
 
-	// private void sendEERP(String userCode, VirtualFile virtualFile) throws OdetteFtpException {
-	// 	// EERP 객체 생성
-	// 	DeliveryNotification eerp = new DeliveryNotification();
-	// 	eerp.setFileReference
-	// 	eerp.setFileReference(virtualFile.getFileReference());
-	// 	eerp.setOriginator(userCode);
-	// 	eerp.setReasonCode(DeliveryNotification.SUCCESSFUL_DELIVERY);
-	
-	// 	// EERP 전송
-	// 	session.write(eerp);
-	// }
-
-	// public EndFileResponse onReceiveFileEnd(VirtualFile virtualFile, long recordCount, long unitCount) {
-	// 	String userCode = session.getUserCode(); // 사용자의 식별자 가져오기
-	// 	File userDirectory = new File(serverBaseDir, userCode); // 사용자별 디렉토리 경로 설정
-
-	// 	// 사용자 디렉토리가 없으면 생성
-	// 	if (!userDirectory.exists()) {
-	// 		userDirectory.mkdirs();
-	// 	}
-
-	// 	// virtualFile에서 실제 파일 객체 가져오기
-	// 	File sourceFile = virtualFile.getFile();
-	// 	String fileName = sourceFile.getName(); // 파일 이름 가져오기
-
-	// 	// 저장할 파일 경로 설정
-	// 	File destinationFile = new File(userDirectory, fileName);
-
-	// 	// 파일 복사
-	// 	try (FileInputStream fis = new FileInputStream(sourceFile);
-	// 		FileOutputStream fos = new FileOutputStream(destinationFile)) {
-
-	// 		byte[] buffer = new byte[1024];
-	// 		int length;
-	// 		while ((length = fis.read(buffer)) > 0) {
-	// 			fos.write(buffer, 0, length);
-	// 		}
-
-	// 	} catch (IOException e) {
-	// 		e.printStackTrace();
-	// 		// 필요 시 예외 처리 추가
-	// 	}
-
-	// 	//ROUTING_WORKER.deliver(serverBaseDir, userCode, virtualFile); // 파일 전달 작업 수행
-
-	// 	return positiveEndFileAnswer(true); // 응답 반환
-	// }
-
-
 	public void onReceiveFileError(VirtualFile virtualFile, AnswerReasonInfo reason) {
 	}
 
 	@Override
-	public void onNotificationReceived(DeliveryNotification notif) {
+	public void onNotificationReceived(DeliveryNotification notif){
 
 		String userCode = session.getUserCode();
 
@@ -404,9 +284,10 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		OftpServerHelper.storeInWork(userCode, obj, serverBaseDir);
 	}
 
-	private void storeNoti(OdetteFtpObject obj) throws IOException {
+	private void storeNotification(VirtualFile virtualFile) throws IOException {
+		DefaultDeliveryNotification notification = createNotification(virtualFile);
 		String userCode = session.getUserCode();
-		OftpServerHelper.storeInMailbox(userCode, obj, serverBaseDir);
+		OftpServerHelper.storeInMailbox(userCode, notification, serverBaseDir);
 	}
 
 	private void createUserDirStructureIfNotExist(String userCode) {
@@ -459,5 +340,17 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		String userCode = session.getUserCode();
 		OftpServerHelper.deleteExchange(userCode, obj, serverBaseDir);
 	}
+
+	private DefaultDeliveryNotification createNotification(VirtualFile virtualFile) {
+        DefaultDeliveryNotification notification = new DefaultDeliveryNotification(EndResponseType.END_TO_END_RESPONSE);
+        notification.setDatasetName(virtualFile.getDatasetName());
+        notification.setDateTime(new Date(virtualFile.getDateTime().getTime()));
+        notification.setTicker(virtualFile.getTicker());
+        notification.setDestination(virtualFile.getOriginator());
+        notification.setOriginator(virtualFile.getDestination());
+        notification.setUserData(virtualFile.getUserData());
+        notification.setCreator(virtualFile.getOriginator());
+        return notification;
+    }
 
 }

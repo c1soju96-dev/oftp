@@ -13,8 +13,6 @@ import org.neociclo.odetteftp.OdetteFtpSession;
 import org.neociclo.odetteftp.OdetteFtpVersion;
 import org.neociclo.odetteftp.TransferMode;
 import org.neociclo.odetteftp.protocol.v20.CipherSuite;
-import org.neociclo.odetteftp.security.AuthenticationChallengeCallback;
-import org.neociclo.odetteftp.security.EncryptAuthenticationChallengeCallback;
 import org.neociclo.odetteftp.security.MappedCallbackHandler;
 import org.neociclo.odetteftp.security.OneToOneHandler;
 import org.neociclo.odetteftp.security.PasswordAuthenticationCallback;
@@ -28,13 +26,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.inspien.cepaas.auth.Keystore;
+import com.inspien.cepaas.exception.InvalidPasswordException;
 import com.inspien.cepaas.handler.OftpPasswordAuthenticationHandler;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.security.auth.callback.Callback;
-import static com.inspien.cepaas.server.OftpServerHelper.getUserConfigFile;
 
 public class OftpServerManager {
 
@@ -76,6 +74,9 @@ public class OftpServerManager {
         if (server != null && server.isStarted()) {
             logger.info("Server is already running. Restarting the server");
             return;
+        }
+        if("".equals(password) || password == null){
+            throw new InvalidPasswordException();
         }
 
         addHandler(PasswordAuthenticationCallback.class, new OftpPasswordAuthenticationHandler(password));

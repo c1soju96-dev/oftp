@@ -7,6 +7,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.UUID;
 
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
@@ -14,9 +15,6 @@ import org.neociclo.odetteftp.util.ProtocolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * @author Rafael Marins
- */
 public class OftpServerHelper {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(OftpServerHelper.class);
@@ -52,6 +50,8 @@ public class OftpServerHelper {
 
 	public static String createFileName(OdetteFtpObject obj) {
 		StringBuffer sb = new StringBuffer();
+		String uuid = UUID.randomUUID().toString();
+    	sb.append(uuid).append('$');
 		sb.append(obj.getOriginator()).append('$');
 		sb.append(obj.getDestination()).append('$');
 		sb.append(ProtocolUtil.formatDate("yyyyMMddHHmmSS.sss", obj.getDateTime())).append('$');
