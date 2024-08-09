@@ -19,4 +19,4 @@ oftpserver:
   auth :
     ssid : NH_SSID
     sfid : NH_SFID
-    password : PASS
+    password : NHPASS

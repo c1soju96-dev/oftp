@@ -26,7 +26,6 @@ public class OftpServerApplication {
                 serverManager.startServer();
             } catch (Exception e) {
                 LOGGER.error("Failed to start OFTP2 server.", e);
-                //serverManager.restartServer();
             }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
