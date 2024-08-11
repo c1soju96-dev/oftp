@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Objects;
 
 import org.neociclo.odetteftp.OdetteFtpSession;
 import org.neociclo.odetteftp.OdetteFtpVersion;
@@ -38,10 +37,10 @@ public class OftpServerManager {
 
     private static final Logger logger = LoggerFactory.getLogger(OftpServerManager.class);
     private final MappedCallbackHandler serverSecurityHandler = new MappedCallbackHandler();
-    TcpServer server;
-    OdetteFtpConfiguration config = createInitialServerConfig();
+    private TcpServer server;
+    private final OdetteFtpConfiguration config = createInitialServerConfig();
     private File serverFile;
-    OftpletFactoryWrapper factory;
+    private OftpletFactoryWrapper factory;
 
     private final String serverDir;
     private final boolean tlsActive;
@@ -70,64 +69,32 @@ public class OftpServerManager {
     }
 
     public void startServer() throws Exception {
-
-        if (server != null && server.isStarted()) {
+        if (isRunning()) {
             logger.info("Server is already running. Restarting the server");
             return;
         }
-        if("".equals(password) || password == null){
-            throw new InvalidPasswordException();
+
+        validatePassword();
+
+        addSecurityHandlers();
+        setupServerFile();
+
+        if (tlsActive) {
+            setupTlsServer();
+        } else {
+            setupNonTlsServer();
         }
 
-        addHandler(PasswordAuthenticationCallback.class, new OftpPasswordAuthenticationHandler(password));
-        addHandler(PasswordCallback.class, new PasswordHandler(ssid, password));
-        //addHandler(AuthenticationChallengeCallback.class, new OftpServerSecureAuthHandler(propertiesSupport));
-        //addHandler(EncryptAuthenticationChallengeCallback.class, new OftpServerEncryptSecureAuthHandler(propertiesSupport));
-        
-        serverFile = new File(".", serverDir);
-        //OftpletFactoryWrapper factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
-        
-        if (tlsActive){
-            factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
-            KeyManager[] km;
-            Keystore ks = new Keystore(keystorePath, keystorePassword.toCharArray());
-            km = Objects.requireNonNull(ks).getKeyManagers();
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(km, null, null);
-            SSLEngine sslEngine = sslContext.createSSLEngine();
-            sslEngine.setUseClientMode(false); // 서버 모드로 설정
-            sslEngine.setNeedClientAuth(false); // 클라이언트 인증 필요 여부 설정
-            server = new TcpServer(new InetSocketAddress(tlsPort), sslEngine, factory);
-        }
-        else {
-            factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler,
-				new OftpletEventListenerAdapter() {
-
-			@Override
-			public void configure(OdetteFtpSession session) {
-				// setup custom parameters specific to this user configuration
-				String userCode = session.getUserCode();
-				//File configFile = getUserConfigFile(serverFile, userCode);
-				PropertiesBasedConfiguration customConfig = new PropertiesBasedConfiguration();
-                File configFile = saveConfigToFile(userCode, password, 728, 10, serverDir);
-				try {
-					customConfig.load(new FileInputStream(configFile));
-					customConfig.setup(session);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-            server = new TcpServer(new InetSocketAddress(nonTlsPort), factory);
-        }
         server.start();
     }
 
     public void stopServer() throws Exception {
-        server.stop();
+        if (server != null) {
+            server.stop();
+        }
     }
 
-    public void restartServer(){
+    public void restartServer() {
         try {
             stopServer();
             startServer();
@@ -137,17 +104,59 @@ public class OftpServerManager {
     }
 
     private static OdetteFtpConfiguration createInitialServerConfig() {
-		OdetteFtpConfiguration c = new OdetteFtpConfiguration();
+        OdetteFtpConfiguration config = new OdetteFtpConfiguration();
+        config.setTransferMode(TransferMode.BOTH);
+        config.setVersion(OdetteFtpVersion.OFTP_V20);
+        config.setDataExchangeBufferSize(4096);
+        config.setWindowSize(64);
+        config.setUseSecureAuthentication(false);
+        config.setCipherSuiteSelection(CipherSuite.NO_CIPHER_SUITE_SELECTION);
+        return config;
+    }
 
-		c.setTransferMode(TransferMode.BOTH);
-		c.setVersion(OdetteFtpVersion.OFTP_V20);
-		c.setDataExchangeBufferSize(4096);
-		c.setWindowSize(64);
-		c.setUseSecureAuthentication(false);
-		c.setCipherSuiteSelection(CipherSuite.NO_CIPHER_SUITE_SELECTION);
+    private void validatePassword() {
+        if (password == null || password.isEmpty()) {
+            throw new InvalidPasswordException();
+        }
+    }
 
-		return c;
-	}
+    private void addSecurityHandlers() {
+        addHandler(PasswordAuthenticationCallback.class, new OftpPasswordAuthenticationHandler(password));
+        addHandler(PasswordCallback.class, new PasswordHandler(ssid, password));
+    }
+
+    private void setupServerFile() {
+        serverFile = new File(".", serverDir);
+    }
+
+    private void setupTlsServer() throws Exception {
+        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
+        KeyManager[] keyManagers = new Keystore(keystorePath, keystorePassword.toCharArray()).getKeyManagers();
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(keyManagers, null, null);
+        SSLEngine sslEngine = sslContext.createSSLEngine();
+        sslEngine.setUseClientMode(false);
+        sslEngine.setNeedClientAuth(false);
+        server = new TcpServer(new InetSocketAddress(tlsPort), sslEngine, factory);
+    }
+
+    private void setupNonTlsServer() {
+        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler, new OftpletEventListenerAdapter() {
+            @Override
+            public void configure(OdetteFtpSession session) {
+                String userCode = session.getUserCode();
+                PropertiesBasedConfiguration customConfig = new PropertiesBasedConfiguration();
+                File configFile = saveConfigToFile(userCode, password, 728, 10, serverDir);
+                try {
+                    customConfig.load(new FileInputStream(configFile));
+                    customConfig.setup(session);
+                } catch (IOException e) {
+                    logger.error("Failed to configure session", e);
+                }
+            }
+        });
+        server = new TcpServer(new InetSocketAddress(nonTlsPort), factory);
+    }
 
     public static File saveConfigToFile(String userCode, String password, int dataExchangeBuffer, int window, String serverDir) {
         File dir = new File(serverDir);
@@ -161,20 +170,20 @@ public class OftpServerManager {
             writer.write("dataExchangeBuffer=" + dataExchangeBuffer + System.lineSeparator());
             writer.write("window=" + window + System.lineSeparator());
         } catch (IOException e) {
-            e.printStackTrace(); // 예외 처리: 로그 기록 또는 오류 처리 로직 추가 가능
+            logger.error("Failed to save configuration to file", e);
         }
         return configFile;
+    }
+
+    public boolean isRunning() {
+        return server != null && server.isStarted();
     }
 
     public static URL getResource(String name) {
         return Thread.currentThread().getContextClassLoader().getResource(name);
     }
-    
+
     public static File getResourceFile(String name) throws URISyntaxException {
         return new File(getResource(name).toURI());
-    }
-
-    public boolean isRunning() {
-        return server != null && server.isStarted();
     }
 }

@@ -2,6 +2,7 @@ package com.inspien.cepaas.server;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -11,11 +12,13 @@ import org.neociclo.odetteftp.util.IoUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.inspien.cepaas.util.OftpServerUtil;
+
 class ServerRoutingWorker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ServerRoutingWorker.class);
 
-    private static class MakeDeliveryTask implements Runnable {
+    static class MakeDeliveryTask implements Runnable {
 
         private final String userCode;
         private final OdetteFtpObject obj;
@@ -29,14 +32,14 @@ class ServerRoutingWorker {
 
         @Override
         public void run() {
-            String filename = OftpServerHelper.createFileName(obj);
+            String filename = OftpServerUtil.createFileName(obj, UUID::randomUUID);
 
-            File sourceDir = OftpServerHelper.getUserWorkDir(baseDir, userCode);
+            File sourceDir = OftpServerUtil.getUserWorkDir(baseDir, userCode);
             ensureDirectoryExists(sourceDir);
             File sourceFile = new File(sourceDir, filename);
 
             String recipientOid = obj.getDestination();
-            File destDir = OftpServerHelper.getUserMailboxDir(baseDir, recipientOid);
+            File destDir = OftpServerUtil.getUserMailboxDir(baseDir, recipientOid);
             ensureDirectoryExists(destDir);
             File destFile = new File(destDir, filename);
 
@@ -54,7 +57,7 @@ class ServerRoutingWorker {
             }
         }
 
-        private void ensureDirectoryExists(File dir) {
+        void ensureDirectoryExists(File dir) {
             if (!dir.exists()) {
                 dir.mkdirs();
             }

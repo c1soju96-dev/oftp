@@ -1,6 +1,6 @@
 package com.inspien.cepaas.server;
 
-import static com.inspien.cepaas.server.OftpServerHelper.*;
+import static com.inspien.cepaas.util.OftpServerUtil.*;
 import static org.neociclo.odetteftp.protocol.DefaultEndFileResponse.*;
 import static org.neociclo.odetteftp.protocol.DefaultStartFileResponse.*;
 
@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.neociclo.odetteftp.OdetteFtpException;
 import org.neociclo.odetteftp.OdetteFtpSession;
@@ -37,6 +38,8 @@ import org.neociclo.odetteftp.util.AttributeKey;
 import org.neociclo.odetteftp.util.SessionHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.inspien.cepaas.util.OftpServerUtil;
 
 class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odetteftp.oftplet.ServerOftplet, OftpletSpeaker, OftpletListener {
 
@@ -281,17 +284,17 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	private void store(OdetteFtpObject obj) throws IOException {
 		String userCode = session.getUserCode();
-		OftpServerHelper.storeInWork(userCode, obj, serverBaseDir);
+		OftpServerUtil.storeInWork(userCode, obj, serverBaseDir, UUID::randomUUID);
 	}
 
 	private void storeNotification(VirtualFile virtualFile) throws IOException {
 		DefaultDeliveryNotification notification = createNotification(virtualFile);
 		String userCode = session.getUserCode();
-		OftpServerHelper.storeInMailbox(userCode, notification, serverBaseDir);
+		OftpServerUtil.storeInMailbox(userCode, notification, serverBaseDir, UUID::randomUUID);
 	}
 
 	private void createUserDirStructureIfNotExist(String userCode) {
-		OftpServerHelper.createUserDirStructureIfNotExist(userCode, serverBaseDir);
+		OftpServerUtil.createUserDirStructureIfNotExist(userCode, serverBaseDir);
 	}
 
 	private boolean recipientExists(String userCode, String recipientOid) {
@@ -311,7 +314,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	 */
 	private boolean targetFileExists(String recipientOid, VirtualFile vf) {
 
-		String filename = createFileName(vf);
+		String filename = createFileName(vf, UUID::randomUUID);
 		File mailboxDir = getUserMailboxDir(serverBaseDir, recipientOid);
 
 		File target = new File(mailboxDir, filename);
@@ -319,7 +322,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	}
 
 	private File createDataFile(VirtualFile vf) throws IOException {
-		return OftpServerHelper.createDataFile(vf, serverBaseDir);
+		return OftpServerUtil.createDataFile(vf, serverBaseDir, UUID::randomUUID);
 	}
 
 	/**
@@ -329,16 +332,16 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	 * @return
 	 */
 	private boolean hasExchange(String userCode) {
-		return OftpServerHelper.hasExchange(userCode, serverBaseDir);
+		return OftpServerUtil.hasExchange(userCode, serverBaseDir);
 	}
 
 	private File[] listExchanges(String userCode) {
-		return OftpServerHelper.listExchanges(userCode, serverBaseDir);
+		return OftpServerUtil.listExchanges(userCode, serverBaseDir);
 	}
 
-	private void deleteExchange(OdetteFtpObject obj) {
+	void deleteExchange(OdetteFtpObject obj) {
 		String userCode = session.getUserCode();
-		OftpServerHelper.deleteExchange(userCode, obj, serverBaseDir);
+		OftpServerUtil.deleteExchange(userCode, obj, serverBaseDir);
 	}
 
 	private DefaultDeliveryNotification createNotification(VirtualFile virtualFile) {
