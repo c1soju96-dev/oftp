@@ -16267,12 +16267,6 @@
     </dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.11</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.bouncycastle</groupId>
         <artifactId>bcmail-jdk16</artifactId>
         <version>1.46</version>
@@ -16296,6 +16290,18 @@
         <version>1.18.34</version>
         <scope>compile</scope>
         <optional>true</optional>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>5.11.0</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>5.10.3</version>
+        <scope>test</scope>
       </dependency>
     </dependencies>
     <repositories>
@@ -16923,7 +16929,7 @@
     <groupId>com.inspien.cepaas</groupId>
     <artifactId>cepaas-oftp2-server</artifactId>
     <version>1.0.0-SNAPSHOT</version>
-    <description>Demo project for Spring Boot</description>
+    <description>OFTP2 Parent</description>
     <url />
     <licenses>
       <license />
@@ -24815,21 +24821,9 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.springframework.security</groupId>
-        <artifactId>spring-security-test</artifactId>
-        <version>6.3.1</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>com.inspien.cepaas</groupId>
         <artifactId>cepass-oftp2-core</artifactId>
         <version>1.0.0-SNAPSHOT</version>
-        <scope>compile</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.neociclo.accord.odetteftp</groupId>
-        <artifactId>oftp-core</artifactId>
-        <version>1.2.0.RC1</version>
         <scope>compile</scope>
       </dependency>
     </dependencies>

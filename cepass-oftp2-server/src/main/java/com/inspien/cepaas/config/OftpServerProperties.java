@@ -36,7 +36,6 @@ public class OftpServerProperties {
     @Setter
     public static class AuthConfig {
         private String ssid;
-        private String sfid;
         private String password;
     }
 }

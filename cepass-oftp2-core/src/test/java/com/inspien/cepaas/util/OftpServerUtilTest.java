@@ -6,8 +6,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
 
-import com.inspien.cepaas.util.OftpServerUtil;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.Date;

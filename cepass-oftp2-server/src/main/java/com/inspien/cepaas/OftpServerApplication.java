@@ -47,9 +47,8 @@ public class OftpServerApplication {
         String keystorePassword = properties.getTls().getKeystorePassword();
         int nonTlsPort = properties.getNonTls().getPort();
         String ssid = properties.getAuth().getSsid();
-        String sfid = properties.getAuth().getSfid();
         String password = properties.getAuth().getPassword();
 
-        return new OftpServerManager(serverDir, tlsActive, tlsPort, keystorePath, keystorePassword, nonTlsPort, ssid, sfid, password);
+        return new OftpServerManager(serverDir, tlsActive, tlsPort, keystorePath, keystorePassword, nonTlsPort, ssid, password);
     }
 }

@@ -49,10 +49,9 @@ public class OftpServerManager {
     private final String keystorePassword;
     private final int nonTlsPort;
     private final String ssid;
-    private final String sfid;
     private final String password;
 
-    public OftpServerManager(String serverDir, boolean tlsActive, int tlsPort, String keystorePath, String keystorePassword, int nonTlsPort, String ssid, String sfid, String password) {
+    public OftpServerManager(String serverDir, boolean tlsActive, int tlsPort, String keystorePath, String keystorePassword, int nonTlsPort, String ssid, String password) {
         this.serverDir = serverDir;
         this.tlsActive = tlsActive;
         this.tlsPort = tlsPort;
@@ -60,7 +59,6 @@ public class OftpServerManager {
         this.keystorePassword = keystorePassword;
         this.nonTlsPort = nonTlsPort;
         this.ssid = ssid;
-        this.sfid = sfid;
         this.password = password;
     }
 
