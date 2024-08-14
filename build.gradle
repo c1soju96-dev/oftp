@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.inspien.cepaas'
+version = '1.0.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+
+subprojects {
+    apply plugin: 'java'
+    
+    repositories {
+        mavenCentral()
+    }
+    
+    dependencies {
+        compileOnly 'org.projectlombok:lombok:1.18.24'
+        annotationProcessor 'org.projectlombok:lombok:1.18.24'
+        testImplementation 'org.mockito:mockito-core:5.11.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

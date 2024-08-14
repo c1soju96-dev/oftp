@@ -1,0 +1,4 @@
+rootProject.name = 'cepaas-oftp2-refactoring'
+
+include 'cepaas-oftp2-core'
+include 'cepaas-oftp2-server'

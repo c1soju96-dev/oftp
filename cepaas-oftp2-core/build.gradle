@@ -1,0 +1,26 @@
+plugins {
+    id 'java'
+}
+
+dependencies {
+    implementation 'org.bouncycastle:bcmail-jdk16:1.46'
+    implementation 'io.netty:netty-all:4.1.42.Final'
+    implementation 'org.neociclo.accord.odetteftp:oftp-core:1.2.0.RC1'
+
+    // SLF4J와 Logback 추가
+    implementation 'org.slf4j:slf4j-api:2.0.7'
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
+}
+
+java {
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'  // UTF-8 인코딩 설정 추가
+}
