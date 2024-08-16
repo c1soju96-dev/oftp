@@ -3,8 +3,6 @@ package com.inspien.cepaas.server;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.util.IoUtil;
 
@@ -19,14 +17,14 @@ import static org.mockito.Mockito.mock;
 
 class ServerRoutingWorkerTest {
 
-    private ServerRoutingWorker serverRoutingWorker;
+    //private ServerRoutingWorker serverRoutingWorker;
 
     @TempDir
     File tempDir;
 
     @BeforeEach
     void setUp() {
-        serverRoutingWorker = new ServerRoutingWorker();
+        //serverRoutingWorker = new ServerRoutingWorker();
     }
 
     @Test

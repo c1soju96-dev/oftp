@@ -11,31 +11,11 @@ import org.springframework.stereotype.Component;
 @Setter
 public class OftpServerProperties {
 
-    private String serverDir;
-    private TlsConfig tls;
-    private NonTlsConfig nonTls;
-    private AuthConfig auth;
-
-    @Getter
-    @Setter
-    public static class TlsConfig {
-        private boolean active;
-        private int port;
-        private String keystorePath;
-        private String keystorePassword;
-    }
-
-    @Getter
-    @Setter
-    public static class NonTlsConfig {
-        private boolean active;
-        private int port;
-    }
-
-    @Getter
-    @Setter
-    public static class AuthConfig {
-        private String ssid;
-        private String password;
-    }
+    private String baseDirectory;
+    private int port;
+    private boolean tlsYn;
+    private String keystorePath;
+    private String keystorePassword;
+    private String ssid;
+    private String password;
 }

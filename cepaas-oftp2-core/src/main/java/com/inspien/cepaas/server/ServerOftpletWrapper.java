@@ -232,8 +232,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		try {
 			store(virtualFile);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Cannot store data file for object: " + e);
 		}
 
 	}
@@ -270,8 +269,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		try {
 			store(notif);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.error("Cannot store data file for object: " + e);
 		}
 
 		ROUTING_WORKER.deliver(serverBaseDir, userCode, notif);

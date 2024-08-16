@@ -19,7 +19,7 @@ class OftpServerManagerTest {
         serverManager = new OftpServerManager(
                 "serverDir", false, 8080,
                 "keystorePath", "keystorePassword",
-                9090, "ssid", "password"
+                "ssid", "password"
         );
     }
 
@@ -43,7 +43,7 @@ class OftpServerManagerTest {
         serverManager = new OftpServerManager(
                 "serverDir", true, 8080,
                 "keystorePath", "keystorePassword",
-                9090, "ssid", ""
+                "ssid", ""
         );
 
         assertThrows(InvalidPasswordException.class, serverManager::startServer);

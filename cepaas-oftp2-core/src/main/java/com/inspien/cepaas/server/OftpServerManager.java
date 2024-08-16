@@ -7,11 +7,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.util.Objects;
 
 import org.neociclo.odetteftp.OdetteFtpSession;
 import org.neociclo.odetteftp.OdetteFtpVersion;
 import org.neociclo.odetteftp.TransferMode;
 import org.neociclo.odetteftp.protocol.v20.CipherSuite;
+import org.neociclo.odetteftp.security.AuthenticationChallengeCallback;
 import org.neociclo.odetteftp.security.MappedCallbackHandler;
 import org.neociclo.odetteftp.security.OneToOneHandler;
 import org.neociclo.odetteftp.security.PasswordAuthenticationCallback;
@@ -21,17 +25,20 @@ import org.neociclo.odetteftp.support.OdetteFtpConfiguration;
 import org.neociclo.odetteftp.support.OftpletEventListenerAdapter;
 import org.neociclo.odetteftp.support.PasswordHandler;
 import org.neociclo.odetteftp.support.PropertiesBasedConfiguration;
+import org.neociclo.odetteftp.util.SecurityUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.inspien.cepaas.auth.Keystore;
 import com.inspien.cepaas.exception.InvalidPasswordException;
 import com.inspien.cepaas.handler.OftpPasswordAuthenticationHandler;
+import com.inspien.cepaas.handler.OftpServerSecureAuthHandler;
 
-import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.security.auth.callback.Callback;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
 
 public class OftpServerManager {
 
@@ -42,22 +49,20 @@ public class OftpServerManager {
     private File serverFile;
     private OftpletFactoryWrapper factory;
 
-    private final String serverDir;
-    private final boolean tlsActive;
-    private final int tlsPort;
+    private final String baseDirectory;
+    private final int port;
+    private final boolean tlsYn;
     private final String keystorePath;
     private final String keystorePassword;
-    private final int nonTlsPort;
     private final String ssid;
     private final String password;
 
-    public OftpServerManager(String serverDir, boolean tlsActive, int tlsPort, String keystorePath, String keystorePassword, int nonTlsPort, String ssid, String password) {
-        this.serverDir = serverDir;
-        this.tlsActive = tlsActive;
-        this.tlsPort = tlsPort;
+    public OftpServerManager(String baseDirectory, boolean tlsYn, int port, String keystorePath, String keystorePassword, String ssid, String password) {
+        this.baseDirectory = baseDirectory;
+        this.tlsYn = tlsYn;
+        this.port = port;
         this.keystorePath = keystorePath;
         this.keystorePassword = keystorePassword;
-        this.nonTlsPort = nonTlsPort;
         this.ssid = ssid;
         this.password = password;
     }
@@ -77,7 +82,7 @@ public class OftpServerManager {
         addSecurityHandlers();
         setupServerFile();
 
-        if (tlsActive) {
+        if (tlsYn) {
             setupTlsServer();
         } else {
             setupNonTlsServer();
@@ -121,21 +126,57 @@ public class OftpServerManager {
     private void addSecurityHandlers() {
         addHandler(PasswordAuthenticationCallback.class, new OftpPasswordAuthenticationHandler(password));
         addHandler(PasswordCallback.class, new PasswordHandler(ssid, password));
+        addHandler(AuthenticationChallengeCallback.class, new OftpServerSecureAuthHandler(ssid, keystorePath, keystorePassword));
     }
 
     private void setupServerFile() {
-        serverFile = new File(".", serverDir);
+        serverFile = new File(".", baseDirectory);
     }
 
     private void setupTlsServer() throws Exception {
-        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
-        KeyManager[] keyManagers = new Keystore(keystorePath, keystorePassword.toCharArray()).getKeyManagers();
+        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler, new SessionFinalizationListener(1));
+        KeyManager[] keyManagers;
+        Keystore keystore = new Keystore(keystorePath, keystorePassword.toCharArray());
+        keyManagers = Objects.requireNonNull(keystore).getKeyManagers();
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(keyManagers, null, null);
         SSLEngine sslEngine = sslContext.createSSLEngine();
         sslEngine.setUseClientMode(false);
-        sslEngine.setNeedClientAuth(false);
-        server = new TcpServer(new InetSocketAddress(tlsPort), sslEngine, factory);
+        sslEngine.setNeedClientAuth(true);
+        server = new TcpServer(new InetSocketAddress(port), sslContext, factory);
+
+
+        // String algorithm = "SunX509";
+        // KeyStore keyStore = SecurityUtil.openKeyStore(new File(keystorePath), keystorePassword.toCharArray());
+        // KeyManagerFactory kmf = KeyManagerFactory.getInstance(algorithm);
+        // kmf.init(keyStore, keystorePassword.toCharArray());
+        // SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+		// sslContext.init(kmf.getKeyManagers(), null, null);
+        
+        // SSLEngine sslEngine = sslContext.createSSLEngine();
+        // sslEngine.setUseClientMode(false);
+        // sslEngine.setNeedClientAuth(true);
+
+        // factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
+        // server = new TcpServer(new InetSocketAddress(port), sslEngine, factory);
+
+        // KeyStore keyStore = KeyStore.getInstance("JKS");
+        // try (FileInputStream keyStoreStream = new FileInputStream(keystorePath)) {
+        //     keyStore.load(keyStoreStream, keystorePassword.toCharArray());
+        // }
+
+        // KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        // keyManagerFactory.init(keyStore, keystorePassword.toCharArray());
+
+        // SSLContext sslContext = SSLContext.getInstance("TLSv1.2");
+        // sslContext.init(keyManagerFactory.getKeyManagers(), null, new SecureRandom());
+
+        // SSLEngine sslEngine = sslContext.createSSLEngine();
+        // sslEngine.setUseClientMode(false); // 서버 모드로 설정
+        // sslEngine.setNeedClientAuth(true);
+        // factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler);
+        // server = new TcpServer(new InetSocketAddress(port), sslEngine, factory);
+
     }
 
     private void setupNonTlsServer() {
@@ -144,7 +185,7 @@ public class OftpServerManager {
             public void configure(OdetteFtpSession session) {
                 String userCode = session.getUserCode();
                 PropertiesBasedConfiguration customConfig = new PropertiesBasedConfiguration();
-                File configFile = saveConfigToFile(userCode, password, 728, 10, serverDir);
+                File configFile = saveConfigToFile(userCode, password, 728, 10, baseDirectory);
                 try {
                     customConfig.load(new FileInputStream(configFile));
                     customConfig.setup(session);
@@ -153,7 +194,7 @@ public class OftpServerManager {
                 }
             }
         });
-        server = new TcpServer(new InetSocketAddress(nonTlsPort), factory);
+        server = new TcpServer(new InetSocketAddress(port), factory);
     }
 
     public static File saveConfigToFile(String userCode, String password, int dataExchangeBuffer, int window, String serverDir) {

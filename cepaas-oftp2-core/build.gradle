@@ -2,10 +2,28 @@ plugins {
     id 'java'
 }
 
+repositories {
+    maven {
+        url 'http://inspien.iptime.org:9901/repository/cepaas'
+        // Snapshot 업데이트 정책 설정
+        allowInsecureProtocol = true // HTTP 프로토콜 허용
+        credentials {
+            username = 'admin'
+            password = '1q2U2Des71Yw'
+        }
+        metadataSources {
+            artifact() // POM이 없는 경우 아티팩트를 직접 검색
+        }
+    }
+    mavenCentral()
+}
+
 dependencies {
     implementation 'org.bouncycastle:bcmail-jdk16:1.46'
-    implementation 'io.netty:netty-all:4.1.42.Final'
-    implementation 'org.neociclo.accord.odetteftp:oftp-core:1.2.0.RC1'
+    //implementation 'io.netty:netty-all:4.1.42.Final'
+    //implementation 'org.neociclo.accord.odetteftp:oftp-core:1.2.0.RC1'
+    implementation 'com.inspien.cepaas:accord-core:1.0'
+    implementation 'io.netty:netty:3.6.5.Final'
 
     // SLF4J와 Logback 추가
     implementation 'org.slf4j:slf4j-api:2.0.7'

@@ -6,7 +6,7 @@ import java.security.NoSuchAlgorithmException;
 
 import org.neociclo.odetteftp.protocol.CommandExchangeBuffer;
 import org.neociclo.odetteftp.protocol.EndSessionReason;
-import org.neociclo.odetteftp.security.PasswordAuthenticationCallback.AuthenticationResult;
+// import org.neociclo.odetteftp.security.PasswordAuthenticationCallback.AuthenticationResult;
 import org.neociclo.odetteftp.support.PasswordAuthenticationHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,13 +29,13 @@ public class OftpPasswordAuthenticationHandler extends PasswordAuthenticationHan
 	}
 
 	@Override
-	public AuthenticationResult authenticate(String remoteSSID, String remotePassword) throws IOException {
+	public boolean authenticate(String remoteSSID, String remotePassword) throws IOException {
 		logger.debug("Authenticating user: {}", remoteSSID);
 
 		if (serverPassword == null) {
 			logger.warn("No user password were set in config file: {}", remoteSSID);
 			cause = EndSessionReason.INVALID_PASSWORD;
-			return AuthenticationResult.UNKNOWN_USER;
+			return false;
 		}
 
 		boolean passwordMatch = false;
@@ -52,17 +52,17 @@ public class OftpPasswordAuthenticationHandler extends PasswordAuthenticationHan
 		}
 
 		if (passwordMatch) {
-			return AuthenticationResult.SUCCESS;
+			return true;
 		} else {
 			cause = EndSessionReason.INVALID_PASSWORD;
-			return AuthenticationResult.INVALID_PASSWORD;
+			return false;
 		}
 	}
 
-	// @Override
-	// public EndSessionReason getCause() {
-	// 	return cause;
-	// }
+	@Override
+	public EndSessionReason getCause() {
+		return cause;
+	}
 
 	private String hash(String text) throws NoSuchAlgorithmException {
 		MessageDigest md = MessageDigest.getInstance("MD5");

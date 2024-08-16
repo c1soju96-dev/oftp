@@ -53,6 +53,8 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 .gradle-test-kit/
 out/
+/cepaas-oftp2-core/bin/
+/cepaas-oftp2-server/bin/
 
 # Gradle wrapper
 gradle/wrapper/gradle-wrapper.properties
