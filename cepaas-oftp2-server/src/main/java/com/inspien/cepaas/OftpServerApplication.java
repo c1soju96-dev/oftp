@@ -40,14 +40,14 @@ public class OftpServerApplication {
 
     @Bean
     public OftpServerManager serverManager(OftpServerProperties properties) {
-        String baseDirectory = properties.getBaseDirectory();
-        boolean tlsYn = properties.isTlsYn();
-        int port = properties.getPort();
-        String keystorePath = properties.getKeystorePath();
-        String keystorePassword = properties.getKeystorePassword();
-        String ssid = properties.getSsid();
-        String password = properties.getPassword();
-
-        return new OftpServerManager(baseDirectory, tlsYn, port, keystorePath, keystorePassword, ssid, password);
+        return OftpServerManager.builder()
+                .baseDirectory(properties.getBaseDirectory())
+                .tlsYn(properties.isTlsYn())
+                .port(properties.getPort())
+                .keystorePath(properties.getKeystorePath())
+                .keystorePassword(properties.getKeystorePassword())
+                .ssid(properties.getSsid())
+                .password(properties.getPassword())
+                .build();
     }
 }

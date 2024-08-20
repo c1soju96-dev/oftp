@@ -16,15 +16,15 @@ oftpserver:
   ssid : NH_SSID
   password : NHPASS
 
-oftpclient:
-  to:
-    inboundSlot: 983293fd-cb00-469c-a4f2-72d33a005671
-  vfOption:
-    partnerSignCertPath: src/test/resources/oftpService/key/mendelson4key.cer
-    myDecryptKeystorePath: src/test/resources/oftpService/key/priv.jks
-    myDecryptKeystorePassword: "#*.cloudedi.net@"
-  downLoadOption:
-    sourceEncoding: UTF-8
-    base64Encode:
-      use: true
-      pattern: .*BASE64.*
+# oftpclient:
+#   to:
+#     inboundSlot: 983293fd-cb00-469c-a4f2-72d33a005671
+#   vfOption:
+#     partnerSignCertPath: src/test/resources/oftpService/key/mendelson4key.cer
+#     myDecryptKeystorePath: src/test/resources/oftpService/key/priv.jks
+#     myDecryptKeystorePassword: "#*.cloudedi.net@"
+#   downLoadOption:
+#     sourceEncoding: UTF-8
+#     base64Encode:
+#       use: true
+#       pattern: .*BASE64.*

@@ -29,6 +29,8 @@ import org.neociclo.odetteftp.protocol.DeliveryNotification;
 import org.neociclo.odetteftp.protocol.DeliveryNotification.EndResponseType;
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
+import org.neociclo.odetteftp.protocol.v20.EnvelopedVirtualFile;
+import org.neociclo.odetteftp.protocol.v20.SecurityLevel;
 import org.neociclo.odetteftp.security.DefaultSecurityContext;
 import org.neociclo.odetteftp.security.MappedCallbackHandler;
 import org.neociclo.odetteftp.security.SecurityContext;
@@ -249,6 +251,12 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+		// TODO Signed 기능
+		// EnvelopedVirtualFile vf = (EnvelopedVirtualFile) virtualFile;
+		// boolean isSigned = (vf.getSecurityLevel() == SecurityLevel.ENCRYPTED || vf.getSecurityLevel() == SecurityLevel.ENCRYPTED_AND_SIGNED);
+
+
 
 		return positiveEndFileAnswer(hasExchange(userCode));
 	}
