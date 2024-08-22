@@ -2,7 +2,7 @@ package com.inspien.cepaas.exception;
 
 import com.inspien.cepaas.enums.ErrorCode;
 
-public class InvalidPasswordException extends AuthException{
+public class InvalidPasswordException extends OftpException{
     public static final ErrorCode CODE = ErrorCode.INVALID_PASSWORD;
     public static final String MESSAGE = ErrorCode.INVALID_PASSWORD.getDetail();
 

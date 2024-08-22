@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
 import com.inspien.cepaas.config.OftpServerProperties;
+import com.inspien.cepaas.server.IOftpServerManager;
 import com.inspien.cepaas.server.OftpServerManager;
 
 @SpringBootApplication
@@ -20,7 +21,7 @@ public class OftpServerApplication {
     }
 
     @Bean
-    CommandLineRunner init(OftpServerManager serverManager) {
+    CommandLineRunner init(IOftpServerManager serverManager) {
         return args -> {
             try {
                 serverManager.startServer();
@@ -39,7 +40,7 @@ public class OftpServerApplication {
     }
 
     @Bean
-    public OftpServerManager serverManager(OftpServerProperties properties) {
+    public IOftpServerManager serverManager(OftpServerProperties properties) {
         return OftpServerManager.builder()
                 .baseDirectory(properties.getBaseDirectory())
                 .tlsYn(properties.isTlsYn())

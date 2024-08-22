@@ -10,6 +10,8 @@ public enum ErrorCode {
     INVALID_AUTH(101, "Authentication is invalid."),
     INVALID_PASSWORD(102, "Password is invalid."),
 
+    INVALID_TLS_SERVER_SETTING(110, "TLS Server setting is invalid."),
+    INVALID_SERVER_SETTING(120, "Server setting is invalid."),
     // Property
     INVALID_FILE(103, "File is invalid.");
 

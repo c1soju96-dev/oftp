@@ -5,6 +5,12 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.Objects;
 
 import org.neociclo.odetteftp.OdetteFtpSession;
@@ -25,7 +31,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.inspien.cepaas.auth.Keystore;
+import com.inspien.cepaas.enums.ErrorCode;
 import com.inspien.cepaas.exception.InvalidPasswordException;
+import com.inspien.cepaas.exception.InvalidTlsServerException;
+import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.handler.OftpPasswordAuthenticationHandler;
 import com.inspien.cepaas.handler.OftpServerSecureAuthHandler;
 
@@ -36,7 +45,7 @@ import javax.net.ssl.SSLContext;
 import javax.security.auth.callback.Callback;
 import javax.net.ssl.KeyManager;
 
-public class OftpServerManager {
+public class OftpServerManager implements IOftpServerManager {
 
     private static final Logger logger = LoggerFactory.getLogger(OftpServerManager.class);
     private final MappedCallbackHandler serverSecurityHandler = new MappedCallbackHandler();
@@ -75,7 +84,8 @@ public class OftpServerManager {
         serverSecurityHandler.addHandler(type, handler);
     }
 
-    public void startServer() throws Exception {
+    @Override
+    public void startServer() throws OftpException {
         if (isRunning()) {
             logger.info("Server is already running. Restarting the server");
             return;
@@ -91,15 +101,21 @@ public class OftpServerManager {
             setupNonTlsServer();
         }
 
-        server.start();
+        try {
+            server.start();
+        } catch (Exception e) {
+            throw new OftpException(ErrorCode.INVALID_SERVER_SETTING);
+        }
     }
 
-    public void stopServer() throws Exception {
+    @Override
+    public void stopServer() {
         if (server != null) {
             server.stop();
         }
     }
 
+    @Override
     public void restartServer() {
         try {
             stopServer();
@@ -136,14 +152,22 @@ public class OftpServerManager {
         serverFile = new File(".", baseDirectory);
     }
 
-    private void setupTlsServer() throws Exception {
+    private void setupTlsServer() {
         factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler, new SessionFinalizationListener(1));
         KeyManager[] keyManagers;
-        Keystore keystore = new Keystore(keystorePath, keystorePassword.toCharArray());
-        keyManagers = Objects.requireNonNull(keystore).getKeyManagers();
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(keyManagers, null, null);
-        server = new TcpServer(new InetSocketAddress(port), sslContext, factory);
+        Keystore keystore;
+        try {
+            keystore = new Keystore(keystorePath, keystorePassword.toCharArray());
+            keyManagers = Objects.requireNonNull(keystore).getKeyManagers();
+            
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(keyManagers, null, null);
+            
+            server = new TcpServer(new InetSocketAddress(port), sslContext, factory);
+        } catch (UnrecoverableKeyException | KeyStoreException | NoSuchProviderException | 
+                 NoSuchAlgorithmException | CertificateException | IOException | KeyManagementException e) {
+            throw new InvalidTlsServerException();
+        }
     }
 
     private void setupNonTlsServer() {
@@ -164,7 +188,7 @@ public class OftpServerManager {
         server = new TcpServer(new InetSocketAddress(port), factory);
     }
 
-    public static File saveConfigToFile(String userCode, String password, int dataExchangeBuffer, int window, String serverDir) {
+    private static File saveConfigToFile(String userCode, String password, int dataExchangeBuffer, int window, String serverDir) {
         File dir = new File(serverDir);
         if (!dir.exists()) {
             dir.mkdirs();
@@ -181,6 +205,7 @@ public class OftpServerManager {
         return configFile;
     }
 
+    @Override
     public boolean isRunning() {
         return server != null && server.isStarted();
     }

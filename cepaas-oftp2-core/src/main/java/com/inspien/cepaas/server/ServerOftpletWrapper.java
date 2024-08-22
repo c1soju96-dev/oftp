@@ -6,6 +6,7 @@ import static org.neociclo.odetteftp.protocol.DefaultStartFileResponse.*;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -55,7 +56,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	private OdetteFtpConfiguration config;
 	private OdetteFtpSession session;
 
-	private Map<String, Iterator<File>> outFileIteratorMap = new HashMap<String, Iterator<File>>();
+	private Map<String, Iterator<File>> outFileIteratorMap = new HashMap<>();
 
 	public ServerOftpletWrapper(File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler securityCallbackHandler, OftpletEventListener listener) {
 		super();
@@ -72,7 +73,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	@Override
 	public boolean isProtocolVersionSupported(OdetteFtpVersion version) {
 		return (config != null ? config.getVersion().isEqualOrOlder(version) : super.isProtocolVersionSupported(version));
-	};
+	}
 
 	@Override
 	public SecurityContext getSecurityContext() {
@@ -146,27 +147,29 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	// -------------------------------------------------------------------------
 
 	public OdetteFtpObject nextOftpObjectToSend() {
-
-		OdetteFtpObject next = null;
-
 		String userCode = session.getUserCode();
-
 		Iterator<File> filesIt = getUserOutFileIterator(userCode);
-		if (filesIt.hasNext()) {
-			File cur = filesIt.next();
-			try {
-				next = loadObject(cur);
-			} catch (IOException e) {
-				logger.error("Failed to load Odette FTP obejct file: " + cur, e);
-				if (cur.exists()) {
-					cur.delete();
+	
+		if (!filesIt.hasNext()) {
+			outFileIteratorMap.remove(userCode);
+			return null;
+		}
+	
+		File cur = filesIt.next();
+		try {
+			return loadObject(cur);
+		} catch (IOException e) {
+			logger.error("Failed to load Odette FTP object file: " + cur, e);
+			if (cur.exists()) {
+				try {
+					Files.delete(cur.toPath());
+					logger.info("Successfully deleted the file:{}", cur.getName());
+				} catch (IOException deleteException) {
+					logger.error("Failed to delete the file: " + cur, deleteException);
 				}
 			}
-		} else {
-			outFileIteratorMap.remove(userCode);
+			return null;
 		}
-
-		return next;
 	}
 
 	private Iterator<File> getUserOutFileIterator(String userCode) {
@@ -181,9 +184,11 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	}
 
 	public void onSendFileStart(VirtualFile virtualFile, long answerCount) {
+		logger.info("onSendFileStart:{}", virtualFile.getDestination());
 	}
 
 	public void onDataSent(VirtualFile virtualFile, long totalOctetsSent) {
+		logger.info("onDataSent:{}", virtualFile.getDestination());
 	}
 
 	public void onSendFileEnd(VirtualFile virtualFile) {
@@ -191,6 +196,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	}
 
 	public void onSendFileError(VirtualFile virtualFile, AnswerReasonInfo reason, boolean retryLater) {
+		logger.error("onSendFileError:{}",reason.getReasonText());
 	}
 
 	public void onNotificationSent(DeliveryNotification notification) {
@@ -203,10 +209,9 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	public StartFileResponse acceptStartFile(VirtualFile vf) {
 
-		String userCode = session.getUserCode();
 		String recipientOid = vf.getDestination();
 
-		if (!recipientExists(userCode, recipientOid)) {
+		if (!recipientExists(recipientOid)) {
 			return negativeStartFileAnswer(AnswerReason.INVALID_DESTINATION,
 					"Recipient [" + recipientOid + "] doesn't exist.", false);
 		}
@@ -231,15 +236,27 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 
 	public void onReceiveFileStart(VirtualFile virtualFile, long answerCount) {
 
+		if (virtualFile instanceof EnvelopedVirtualFile) {
+			EnvelopedVirtualFile envelopedFile = (EnvelopedVirtualFile) virtualFile;
+			// 복호화 및 서명 검증 로직 추가
+			// 예를 들어, 서명 검증 및 복호화 상태 확인
+			if (envelopedFile.getSecurityLevel() == SecurityLevel.SIGNED) {
+				// 서명 검증 로직
+			}
+			if (envelopedFile.getSecurityLevel() == SecurityLevel.ENCRYPTED) {
+				// 복호화 로직
+			}
+		}
 		try {
 			store(virtualFile);
 		} catch (IOException e) {
-			logger.error("Cannot store data file for object: " + e);
+			logger.error("Cannot store data file for object:{}", e.getMessage());
 		}
 
 	}
 
 	public void onDataReceived(VirtualFile virtualFile, long totalOctetsReceived) {
+		logger.info("onDataReceived:{}", virtualFile.getDestination());
 	}
 
 	public EndFileResponse onReceiveFileEnd(VirtualFile virtualFile, long recordCount, long unitCount) {
@@ -252,21 +269,15 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
             e.printStackTrace();
         }
 
-		// TODO Signed 기능
-		// EnvelopedVirtualFile vf = (EnvelopedVirtualFile) virtualFile;
-		// boolean isSigned = (vf.getSecurityLevel() == SecurityLevel.ENCRYPTED || vf.getSecurityLevel() == SecurityLevel.ENCRYPTED_AND_SIGNED);
-
-
-
 		return positiveEndFileAnswer(hasExchange(userCode));
 	}
 
 	public static OdetteFtpObject getSessionCurrentRequest(OdetteFtpSession session) {
-        OdetteFtpObject exchange = session.getTypedAttribute(OdetteFtpObject.class, CURRENT_REQUEST_ATTR);
-        return exchange;
+        return session.getTypedAttribute(OdetteFtpObject.class, CURRENT_REQUEST_ATTR);
     }
 
 	public void onReceiveFileError(VirtualFile virtualFile, AnswerReasonInfo reason) {
+		logger.error("onReceiveFileError:{}",reason.getReasonText());
 	}
 
 	@Override
@@ -277,7 +288,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		try {
 			store(notif);
 		} catch (IOException e) {
-			logger.error("Cannot store data file for object: " + e);
+			logger.error("Cannot store data file for object:{}", e.getMessage());
 		}
 
 		ROUTING_WORKER.deliver(serverBaseDir, userCode, notif);
@@ -303,7 +314,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		OftpServerUtil.createUserDirStructureIfNotExist(userCode, serverBaseDir);
 	}
 
-	private boolean recipientExists(String userCode, String recipientOid) {
+	private boolean recipientExists(String recipientOid) {
 		File recipientDir = getUserDir(serverBaseDir, recipientOid);
 		if (!recipientDir.exists()) {
 			recipientDir.mkdirs();

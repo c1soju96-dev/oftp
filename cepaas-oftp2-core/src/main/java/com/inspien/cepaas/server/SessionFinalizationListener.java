@@ -44,7 +44,9 @@ public class SessionFinalizationListener extends OftpletEventListenerAdapter {
 
 	public void waitFinalization() throws InterruptedException {
 		synchronized (lock) {
-			lock.wait(MINUTES.toMillis(5));
+			while (true){
+				lock.wait(MINUTES.toMillis(5));
+  			}
 		}
 	}
 }
