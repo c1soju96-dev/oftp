@@ -23,21 +23,6 @@ class OftpServerManagerTest {
         );
     }
 
-    // @Test
-    // void testStartServerWithValidConfig() throws Exception {
-    //     try (MockedStatic<SSLContext> sslContextMock = mockStatic(SSLContext.class);
-    //          MockedStatic<OftpServerUtil> oftpHelperMock = mockStatic(OftpServerUtil.class)) {
-
-    //         SSLContext sslContext = mock(SSLContext.class);
-    //         sslContextMock.when(() -> SSLContext.getInstance("TLS")).thenReturn(sslContext);
-
-    //         serverManager.startServer();
-
-    //         sslContextMock.verify(() -> SSLContext.getInstance("TLS"), times(1));
-    //         oftpHelperMock.verify(() -> OftpServerUtil.createFileName(any(), UUID::randomUUID), times(0));
-    //     }
-    // }
-
     @Test
     void testStartServerWithInvalidPassword() {
         serverManager = new OftpServerManager(
@@ -48,24 +33,6 @@ class OftpServerManagerTest {
 
         assertThrows(InvalidPasswordException.class, serverManager::startServer);
     }
-
-    // @Test
-    // void testNonTlsServerSetup() throws Exception {
-    //     serverManager = new OftpServerManager(
-    //             "serverDir", false, 0,
-    //             null, null,
-    //             9090, "ssid", "sfid", "password"
-    //     );
-
-    //     try (MockedStatic<PropertiesBasedConfiguration> configMock = mockStatic(PropertiesBasedConfiguration.class)) {
-    //         PropertiesBasedConfiguration mockConfig = mock(PropertiesBasedConfiguration.class);
-    //         configMock.when(PropertiesBasedConfiguration::new).thenReturn(mockConfig);
-
-    //         serverManager.startServer();
-
-    //         verify(mockConfig, times(1)).load(any(FileInputStream.class));
-    //     }
-    // }
 
     @Test
     void testStopServer() throws Exception {

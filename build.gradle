@@ -34,6 +34,7 @@ subprojects {
     
     dependencies {
         compileOnly 'org.projectlombok:lombok:1.18.24'
+        implementation 'com.inspien.cepaas:accord-core:1.0'
         annotationProcessor 'org.projectlombok:lombok:1.18.24'
         testImplementation 'org.mockito:mockito-core:5.11.0'
         testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'

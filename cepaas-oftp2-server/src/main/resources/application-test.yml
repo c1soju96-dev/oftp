@@ -1,0 +1,8 @@
+oftpserver:
+  base_directory: src/test/resources/serverdir
+  port: 26619
+  tls_yn: false
+  keystorePath : src/test/resources/keys/priv.jks
+  keystorePassword : "#*.cloudedi.net@"
+  ssid : NH_SSID
+  password : NHPASS

@@ -82,10 +82,10 @@ class OftpServerUtilTest {
     }
 
     @Test
-    void testStoreAndLoadObject_WithSerializableMock() throws IOException, ClassNotFoundException {
+    void testStoreAndLoadObject_WithSerializableMock() throws IOException {
         // Given
         File outputFile = new File(tempDir, "test.vfile");
-        OdetteFtpObject odetteFtpObject = mock(OdetteFtpObject.class, withSettings().serializable());
+        odetteFtpObject = mock(OdetteFtpObject.class, withSettings().serializable());
         when(odetteFtpObject.getOriginator()).thenReturn("originator");
         when(odetteFtpObject.getDestination()).thenReturn("destination");
         when(odetteFtpObject.getDatasetName()).thenReturn("dataset");

@@ -49,4 +49,5 @@ class OftpServerPropertiesTest {
         assertEquals("NH_SSID", oftpServerProperties.getSsid());
         assertEquals("NHPASS", oftpServerProperties.getPassword());
     }
+
 }

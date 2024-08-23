@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.nio.file.Files;
 
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
@@ -13,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 public class OftpServerUtil {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(OftpServerUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(OftpServerUtil.class);
 
     private static final FilenameFilter EXCHANGES_FILENAME_FILTER = (dir, name) -> 
             name.endsWith(".vfile") || name.endsWith(".notif");
@@ -40,23 +41,24 @@ public class OftpServerUtil {
     }
 
 	public static String createFileName(OdetteFtpObject obj, Supplier<UUID> uuidSupplier) {
-		StringBuffer sb = new StringBuffer();
-		String uuid = uuidSupplier.get().toString();
-		sb.append(uuid).append('$');
-		sb.append(obj.getOriginator()).append('$');
-		sb.append(obj.getDestination()).append('$');
-		Date dateTime = obj.getDateTime();
-		if (dateTime != null) {
-			sb.append(ProtocolUtil.formatDate("yyyyMMddHHmmSS.sss", dateTime)).append('$');
-		}
-		sb.append(obj.getDatasetName());
-		if (obj instanceof VirtualFile) {
-			sb.append(".vfile");
-		} else {
-			sb.append(".notif");
-		}
-		return sb.toString();
-	}
+        StringBuilder sb = new StringBuilder();
+        String uuid = uuidSupplier.get().toString();
+        sb.append(uuid).append('$');
+        sb.append(obj.getOriginator()).append('$');
+        sb.append(obj.getDestination()).append('$');
+        Date dateTime = obj.getDateTime();
+        if (dateTime != null) {
+            sb.append(ProtocolUtil.formatDate("yyyyMMddHHmmSS.sss", dateTime)).append('$');
+        }
+        sb.append(obj.getDatasetName());
+        if (obj instanceof VirtualFile) {
+            sb.append(".vfile");
+        } else {
+            sb.append(".notif");
+        }
+        return sb.toString();
+    }
+    
 
     public static File getServerDataDir(File baseDir) {
         return new File(baseDir, "data");
@@ -85,7 +87,7 @@ public class OftpServerUtil {
              ObjectInputStream os = new ObjectInputStream(stream)) {
             obj = (OdetteFtpObject) os.readObject();
         } catch (ClassNotFoundException cnfe) {
-            LOGGER.error("Cannot load Odette FTP Object file: " + input, cnfe);
+            logger.error("Cannot load Odette FTP Object file: " + input, cnfe);
         }
 
         return obj;
@@ -133,7 +135,12 @@ public class OftpServerUtil {
             VirtualFile vf = (VirtualFile) obj;
             File payloadFile = vf.getFile();
             if (payloadFile.exists()) {
-                payloadFile.delete();
+                try {
+					Files.delete(payloadFile.toPath());
+					logger.info("Successfully deleted the file:{}", payloadFile.getName());
+				} catch (IOException deleteException) {
+					logger.error("Failed to delete the file: " + payloadFile, deleteException);
+				}
             }
         }
 
@@ -142,26 +149,13 @@ public class OftpServerUtil {
         File mailboxFile = new File(mailboxDir, filename);
 
         if (mailboxFile.exists()) {
-            mailboxFile.delete();
+            try {
+                Files.delete(mailboxFile.toPath());
+                logger.info("Successfully deleted the file:{}", mailboxFile.getName());
+            } catch (IOException deleteException) {
+                logger.error("Failed to delete the file: " + mailboxFile, deleteException);
+            }
         }
     }
 
-    public static File createFile(VirtualFile vf, File tmpDir, Supplier<UUID> uuidSupplier) throws IOException {
-        String filename = createVirtualFileName(vf);
-        return File.createTempFile(filename + "_", null, tmpDir);
-    }
-
-    public static String createVirtualFileName(OdetteFtpObject obj) {
-        String sb = String.join("$",
-                obj.getOriginator(),
-                obj.getDestination(),
-                ProtocolUtil.formatDate("yyyyMMddHHmmSS.sss", obj.getDateTime()),
-                obj.getDatasetName());
-        if (obj instanceof VirtualFile) {
-            sb += ".vfile";
-        } else {
-            sb += ".notif";
-        }
-        return sb;
-    }
 }

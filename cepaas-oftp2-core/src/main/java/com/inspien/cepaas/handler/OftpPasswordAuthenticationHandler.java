@@ -6,7 +6,6 @@ import java.security.NoSuchAlgorithmException;
 
 import org.neociclo.odetteftp.protocol.CommandExchangeBuffer;
 import org.neociclo.odetteftp.protocol.EndSessionReason;
-// import org.neociclo.odetteftp.security.PasswordAuthenticationCallback.AuthenticationResult;
 import org.neociclo.odetteftp.support.PasswordAuthenticationHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,9 +71,9 @@ public class OftpPasswordAuthenticationHandler extends PasswordAuthenticationHan
 	}
 
 	private String toHexString(byte[] digest) {
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder(); // Use StringBuilder instead of StringBuffer
 		for (byte d : digest) {
-			String hex = Integer.toHexString((int) (d & 0xff));
+			String hex = Integer.toHexString(d & 0xff);
 			if (hex.length() == 1) {
 				sb.append('0').append(hex);
 			} else {
