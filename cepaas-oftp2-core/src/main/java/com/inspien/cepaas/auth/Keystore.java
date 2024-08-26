@@ -25,18 +25,18 @@ public class Keystore {
     @Getter
     private PrivateKey privateKey;
     @Getter
-    private KeyStore keystore;
+    private KeyStore keyStore;
     @Getter
     private X509Certificate certificate;
 
     public Keystore(String keystoreFilePath, char[] keystorePassword) throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, IOException, UnrecoverableKeyException{
         File keystoreFile = new File(keystoreFilePath);
         if (!keystoreFile.exists()) throw new IOException("Keystore file not found: " + keystoreFile.getAbsolutePath());
-        keystore = SecurityUtil.openKeyStore(keystoreFile, keystorePassword);
+        keyStore = SecurityUtil.openKeyStore(keystoreFile, keystorePassword);
         KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keyManagerFactory.init(keystore, keystorePassword);
+        keyManagerFactory.init(keyStore, keystorePassword);
         keyManagers = keyManagerFactory.getKeyManagers();
-        privateKey = SecurityUtil.getPrivateKey(keystore, keystorePassword);
-        certificate = SecurityUtil.getCertificateEntry(keystore);
+        privateKey = SecurityUtil.getPrivateKey(keyStore, keystorePassword);
+        certificate = SecurityUtil.getCertificateEntry(keyStore);
     }
 }

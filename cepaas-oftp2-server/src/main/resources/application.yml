@@ -15,6 +15,20 @@ oftpserver:
   keystorePassword : "#*.cloudedi.net@"
   ssid : NH_SSID
   password : NHPASS
+  partnerkeys:
+  - partnerName: MENDELSON_SSID
+    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
+    partnerKeystorePassword: "#*.cloudedi.net@"
+  - partnerName: mendelson1
+    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
+    partnerKeystorePassword: "#*.cloudedi.net@"
+  - partnerName: mendelson2
+    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
+    partnerKeystorePassword: "#*.cloudedi.net@"
+
 
 # oftpclient:
 #   to:
@@ -28,17 +42,3 @@ oftpserver:
 #     base64Encode:
 #       use: true
 #       pattern: .*BASE64.*
-oftppartners:
-  partnerkeys:
-    - partnerName: mendelson1
-      partnerSignCertPath: src/test/resources/oftpService/key/mendelson4key.cer
-      partnerKeystorePath: src/test/resources/oftpService/key/priv.jks
-      partnerKeystorePassword: "#*.cloudedi.net@"
-    - partnerName: mendelson2
-      partnerSignCertPath: src/test/resources/oftpService/key/mendelson4key.cer
-      partnerKeystorePath: src/test/resources/oftpService/key/priv.jks
-      partnerKeystorePassword: "#*.cloudedi.net@"
-    - partnerName: mendelson
-      partnerSignCertPath: src/test/resources/oftpService/key/mendelson4key.cer
-      partnerKeystorePath: src/test/resources/oftpService/key/priv.jks
-      partnerKeystorePassword: "#*.cloudedi.net@"

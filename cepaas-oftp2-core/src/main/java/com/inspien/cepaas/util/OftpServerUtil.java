@@ -108,6 +108,9 @@ public class OftpServerUtil {
 
     public static void storeInWork(String userCode, OdetteFtpObject obj, File serverBaseDir, Supplier<UUID> uuidSupplier) throws IOException {
         File workDir = getUserWorkDir(serverBaseDir, userCode);
+        if (!workDir.exists() && !workDir.mkdirs()) {
+            throw new IOException("Failed to create work directory: " + workDir.getAbsolutePath());
+        }
         String filename = createFileName(obj, uuidSupplier);
         File outputFile = new File(workDir, filename);
         storeObject(outputFile, obj);

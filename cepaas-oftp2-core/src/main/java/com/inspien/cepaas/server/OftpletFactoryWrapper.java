@@ -14,21 +14,26 @@ public class OftpletFactoryWrapper implements OftpletFactory {
 	private OdetteFtpConfiguration config;
 	private OftpletEventListener listener;
 	private MappedCallbackHandler securityCallbackHandler;
+    private String keystorePath;
+    private String keystorePassword;
 
-	public OftpletFactoryWrapper(File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler serverSecurityHandler) {
-		this(serverBaseDir, config, serverSecurityHandler, null);
+	public OftpletFactoryWrapper(String keystorePath, String keystorePassword, File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler serverSecurityHandler) {
+		this(keystorePath, keystorePassword, serverBaseDir, config, serverSecurityHandler, null);
 	}
 
-	public OftpletFactoryWrapper(File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler serverSecurityHandler, OftpletEventListener listener) {
+	public OftpletFactoryWrapper(String keystorePath, String keystorePassword, File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler serverSecurityHandler, OftpletEventListener listener) {
 		super();
 		this.serverBaseDir = serverBaseDir;
 		this.config = config;
 		this.securityCallbackHandler = serverSecurityHandler;
 		this.listener = listener;
+		this.keystorePath = keystorePath;
+		this.keystorePassword = keystorePassword;
+
 	}
 
 	public Oftplet createProvider() {
-		return new ServerOftpletWrapper(serverBaseDir, config, securityCallbackHandler, listener);
+		return new ServerOftpletWrapper(keystorePath, keystorePassword, serverBaseDir, config, securityCallbackHandler, listener);
 	}
 
 }

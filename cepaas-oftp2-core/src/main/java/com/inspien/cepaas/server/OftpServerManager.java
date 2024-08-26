@@ -1,27 +1,19 @@
 package com.inspien.cepaas.server;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.KeyManagementException;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
-import java.util.Objects;
-
+import com.inspien.cepaas.auth.Keystore;
+import com.inspien.cepaas.enums.ErrorCode;
+import com.inspien.cepaas.exception.InvalidPasswordException;
+import com.inspien.cepaas.exception.InvalidTlsServerException;
+import com.inspien.cepaas.exception.OftpException;
+import com.inspien.cepaas.handler.OftpPasswordAuthenticationHandler;
+import com.inspien.cepaas.handler.OftpServerSecureAuthHandler;
+import lombok.Builder;
+import lombok.Getter;
 import org.neociclo.odetteftp.OdetteFtpSession;
 import org.neociclo.odetteftp.OdetteFtpVersion;
 import org.neociclo.odetteftp.TransferMode;
 import org.neociclo.odetteftp.protocol.v20.CipherSuite;
-import org.neociclo.odetteftp.security.AuthenticationChallengeCallback;
-import org.neociclo.odetteftp.security.MappedCallbackHandler;
-import org.neociclo.odetteftp.security.OneToOneHandler;
-import org.neociclo.odetteftp.security.PasswordAuthenticationCallback;
-import org.neociclo.odetteftp.security.PasswordCallback;
+import org.neociclo.odetteftp.security.*;
 import org.neociclo.odetteftp.service.TcpServer;
 import org.neociclo.odetteftp.support.OdetteFtpConfiguration;
 import org.neociclo.odetteftp.support.OftpletEventListenerAdapter;
@@ -30,20 +22,17 @@ import org.neociclo.odetteftp.support.PropertiesBasedConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.inspien.cepaas.auth.Keystore;
-import com.inspien.cepaas.enums.ErrorCode;
-import com.inspien.cepaas.exception.InvalidPasswordException;
-import com.inspien.cepaas.exception.InvalidTlsServerException;
-import com.inspien.cepaas.exception.OftpException;
-import com.inspien.cepaas.handler.OftpPasswordAuthenticationHandler;
-import com.inspien.cepaas.handler.OftpServerSecureAuthHandler;
-
-import lombok.Builder;
-import lombok.Getter;
-
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.security.auth.callback.Callback;
-import javax.net.ssl.KeyManager;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.security.*;
+import java.security.cert.CertificateException;
+import java.util.Objects;
 
 public class OftpServerManager implements IOftpServerManager {
 
@@ -70,7 +59,8 @@ public class OftpServerManager implements IOftpServerManager {
     private final String password;
 
     @Builder
-    public OftpServerManager(String baseDirectory, boolean tlsYn, int port, String keystorePath, String keystorePassword, String ssid, String password) {
+    public OftpServerManager(String baseDirectory, boolean tlsYn, int port, String keystorePath, String keystorePassword, 
+                             String ssid, String password) {
         this.baseDirectory = baseDirectory;
         this.tlsYn = tlsYn;
         this.port = port;
@@ -153,7 +143,7 @@ public class OftpServerManager implements IOftpServerManager {
     }
 
     private void setupTlsServer() {
-        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler, new SessionFinalizationListener(1));
+        factory = new OftpletFactoryWrapper(keystorePath, keystorePassword, serverFile, config, serverSecurityHandler, new SessionFinalizationListener(1));
         KeyManager[] keyManagers;
         Keystore keystore;
         try {
@@ -171,7 +161,7 @@ public class OftpServerManager implements IOftpServerManager {
     }
 
     private void setupNonTlsServer() {
-        factory = new OftpletFactoryWrapper(serverFile, config, serverSecurityHandler, new OftpletEventListenerAdapter() {
+        factory = new OftpletFactoryWrapper(keystorePath, keystorePassword, serverFile, config, serverSecurityHandler, new OftpletEventListenerAdapter() {
             @Override
             public void configure(OdetteFtpSession session) {
                 String userCode = session.getUserCode();

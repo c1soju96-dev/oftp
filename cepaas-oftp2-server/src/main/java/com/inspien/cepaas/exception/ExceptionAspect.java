@@ -15,7 +15,7 @@ public class ExceptionAspect {
     public void handleException(Throwable e) {
         if (e instanceof OftpException) {
             OftpException ae = (OftpException) e;
-            logger.error("Error Code: {}, Message: {}", ae.getErrorCode().getCode(), ae.getMessage());
+            logger.error("Error Code: {}, Message: {}", ae.getErrorCode().getCode(), ae.getErrorCode().getDetail());
         } else {
             logger.error("An unexpected error occurred: {}", e.getMessage());
         }

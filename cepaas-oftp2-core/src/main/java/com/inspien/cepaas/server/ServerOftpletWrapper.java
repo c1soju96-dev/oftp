@@ -7,6 +7,11 @@ import static org.neociclo.odetteftp.protocol.DefaultStartFileResponse.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.bouncycastle.cms.CMSException;
 import org.neociclo.odetteftp.OdetteFtpException;
 import org.neociclo.odetteftp.OdetteFtpSession;
 import org.neociclo.odetteftp.OdetteFtpVersion;
@@ -30,6 +36,7 @@ import org.neociclo.odetteftp.protocol.DeliveryNotification;
 import org.neociclo.odetteftp.protocol.DeliveryNotification.EndResponseType;
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
+import org.neociclo.odetteftp.protocol.v20.DefaultSignedDeliveryNotification;
 import org.neociclo.odetteftp.protocol.v20.EnvelopedVirtualFile;
 import org.neociclo.odetteftp.protocol.v20.SecurityLevel;
 import org.neociclo.odetteftp.security.DefaultSecurityContext;
@@ -38,10 +45,14 @@ import org.neociclo.odetteftp.security.SecurityContext;
 import org.neociclo.odetteftp.support.OdetteFtpConfiguration;
 import org.neociclo.odetteftp.support.OftpletEventListener;
 import org.neociclo.odetteftp.util.AttributeKey;
+import org.neociclo.odetteftp.util.EnvelopingUtil;
 import org.neociclo.odetteftp.util.SessionHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.inspien.cepaas.auth.Keystore;
+import com.inspien.cepaas.enums.ErrorCode;
+import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.util.OftpServerUtil;
 
 class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odetteftp.oftplet.ServerOftplet, OftpletSpeaker, OftpletListener {
@@ -55,15 +66,19 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 	private SecurityContext securityContext;
 	private OdetteFtpConfiguration config;
 	private OdetteFtpSession session;
+	private String keystorePath;
+    private String keystorePassword;
 
 	private Map<String, Iterator<File>> outFileIteratorMap = new HashMap<>();
 
-	public ServerOftpletWrapper(File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler securityCallbackHandler, OftpletEventListener listener) {
+	public ServerOftpletWrapper(String keystorePath, String keystorePassword, File serverBaseDir, OdetteFtpConfiguration config, MappedCallbackHandler securityCallbackHandler, OftpletEventListener listener) {
 		super();
 		this.serverBaseDir = serverBaseDir;
 		this.config = config;
 		this.securityContext = new DefaultSecurityContext(securityCallbackHandler);
 		this.listener = listener;
+		this.keystorePath = keystorePath;
+		this.keystorePassword = keystorePassword;
 	}
 
 	// -------------------------------------------------------------------------
@@ -264,7 +279,7 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		ROUTING_WORKER.deliver(serverBaseDir, userCode, virtualFile);
 
 		try {
-            storeNotification(virtualFile);
+            storeNotification(virtualFile, keystorePath, keystorePassword);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -304,10 +319,24 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		OftpServerUtil.storeInWork(userCode, obj, serverBaseDir, UUID::randomUUID);
 	}
 
-	private void storeNotification(VirtualFile virtualFile) throws IOException {
-		DefaultDeliveryNotification notification = createNotification(virtualFile);
+	private void storeNotification(VirtualFile virtualFile, String keystorePath, String keystorePassword) throws IOException {
+
 		String userCode = session.getUserCode();
-		OftpServerUtil.storeInMailbox(userCode, notification, serverBaseDir, UUID::randomUUID);
+		EnvelopedVirtualFile vf = (EnvelopedVirtualFile) virtualFile;
+		if(vf.isSignedNotificationRequest()){
+			DeliveryNotification signedNotification = org.neociclo.odetteftp.util.OdetteFtpSupport.getReplyDeliveryNotification(vf);
+			try {
+				Keystore keystore = new Keystore(keystorePath, keystorePassword.toCharArray());
+				EnvelopingUtil.addNotifSignature((DefaultSignedDeliveryNotification)signedNotification, vf.getCipherSuite(), keystore.getCertificate(), keystore.getPrivateKey());
+			} catch (UnrecoverableKeyException | KeyStoreException | NoSuchProviderException | NoSuchAlgorithmException
+					| CertificateException | IOException | CMSException e) {
+				throw new OftpException(ErrorCode.INVALID_KEY);
+			}
+			OftpServerUtil.storeInMailbox(userCode, signedNotification, serverBaseDir, UUID::randomUUID);
+		} else {
+			DefaultDeliveryNotification notification = createNotification(virtualFile);
+			OftpServerUtil.storeInMailbox(userCode, notification, serverBaseDir, UUID::randomUUID);
+		}
 	}
 
 	private void createUserDirStructureIfNotExist(String userCode) {
@@ -322,13 +351,6 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		return recipientDir.exists();
 	}
 
-	/**
-	 * Check if the Virtual File already exist in the recipient mailbox.
-	 * 
-	 * @param recipientOid
-	 * @param vf
-	 * @return
-	 */
 	private boolean targetFileExists(String recipientOid, VirtualFile vf) {
 
 		String filename = createFileName(vf, UUID::randomUUID);
@@ -342,12 +364,6 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
 		return OftpServerUtil.createDataFile(vf, serverBaseDir, UUID::randomUUID);
 	}
 
-	/**
-	 * Check it has exchange in the user mailbox.
-	 *
-	 * @param userCode
-	 * @return
-	 */
 	private boolean hasExchange(String userCode) {
 		return OftpServerUtil.hasExchange(userCode, serverBaseDir);
 	}
@@ -372,5 +388,4 @@ class ServerOftpletWrapper extends OftpletAdapter implements org.neociclo.odette
         notification.setCreator(virtualFile.getOriginator());
         return notification;
     }
-
 }

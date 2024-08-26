@@ -7,7 +7,10 @@ import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.StreamCorruptedException;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.UUID;
 
@@ -156,4 +159,105 @@ class OftpServerUtilTest {
         // Then
         assertTrue(hasExchange, "Should return true when there is an exchange");
     }
+
+    @Test
+    void testLoadObject_InvalidStreamHeader() throws IOException {
+        // Given
+        File corruptedFile = new File(tempDir, "corrupted.vfile");
+        try (FileOutputStream fos = new FileOutputStream(corruptedFile)) {
+            fos.write("This is not a serialized object".getBytes(StandardCharsets.UTF_8));
+        }
+
+        // When & Then
+        assertThrows(StreamCorruptedException.class, () -> {
+            OftpServerUtil.loadObject(corruptedFile);
+        }, "Should throw StreamCorruptedException when the file contains invalid stream header");
+    }
+
+    @Test
+    void testStoreObject_IOException() {
+        // Given
+        File nonWritableFile = new File(tempDir, "readonly.vfile");
+        odetteFtpObject = mock(OdetteFtpObject.class, withSettings().serializable());
+
+        // Create the file and set it as non-writable
+        try {
+            nonWritableFile.getParentFile().mkdirs();
+            nonWritableFile.createNewFile();
+            assertTrue(nonWritableFile.setWritable(false, false), "Failed to set the file as non-writable");
+        } catch (IOException e) {
+            fail("Setup failed: could not create or set the file as non-writable");
+        }
+
+        // When & Then
+        IOException thrown = assertThrows(IOException.class, () -> {
+            OftpServerUtil.storeObject(nonWritableFile, odetteFtpObject);
+        }, "Should throw IOException when the file is not writable");
+
+        assertNotNull(thrown.getMessage());
+    }
+
+    @Test
+    void testDeleteExchange_FileNotFound() {
+        // Given
+        String userCode = "user123";
+        when(virtualFile.getFile()).thenReturn(new File(tempDir, "nonexistent.vfile"));
+
+        // When & Then
+        assertDoesNotThrow(() -> {
+            OftpServerUtil.deleteExchange(userCode, virtualFile, tempDir);
+        }, "Deleting a non-existent file should not throw an exception");
+    }
+
+    @Test
+    void testCreateFileName_NullDate() {
+        // Given
+        UUID testUUID = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        when(odetteFtpObject.getOriginator()).thenReturn("originator");
+        when(odetteFtpObject.getDestination()).thenReturn("destination");
+        when(odetteFtpObject.getDatasetName()).thenReturn("dataset");
+        when(odetteFtpObject.getDateTime()).thenReturn(null);  // Date가 null인 경우
+
+        // When
+        String fileName = OftpServerUtil.createFileName(odetteFtpObject, () -> testUUID);
+
+        // Then
+        assertTrue(fileName.contains("123e4567-e89b-12d3-a456-426614174000"), "UUID should be present in the filename");
+        assertTrue(fileName.contains("originator"), "Originator should be present in the filename");
+        assertTrue(fileName.contains("destination"), "Destination should be present in the filename");
+        assertFalse(fileName.contains("null"), "Filename should not contain the string 'null'");
+    }
+
+    @Test
+    void testGetUserMailboxDir_NullUserCode() {
+        // When & Then
+        assertThrows(NullPointerException.class, () -> {
+            OftpServerUtil.getUserMailboxDir(tempDir, null);
+        }, "Null userCode should throw NullPointerException");
+    }
+
+    @Test
+    void testStoreInWork_ServerBaseDirDoesNotExist() {
+        // Given
+        String userCode = "user123";
+        File nonExistentDir = new File(tempDir, "nonexistent");
+        UUID testUUID = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+
+        // Use serializable mock
+        odetteFtpObject = mock(OdetteFtpObject.class, withSettings().serializable());
+        
+        when(odetteFtpObject.getOriginator()).thenReturn("originator");
+        when(odetteFtpObject.getDestination()).thenReturn("destination");
+        when(odetteFtpObject.getDatasetName()).thenReturn("dataset");
+
+        // When
+        assertDoesNotThrow(() -> {
+            OftpServerUtil.storeInWork(userCode, odetteFtpObject, nonExistentDir, () -> testUUID);
+        }, "Should not throw an exception even if the base directory does not exist");
+
+        // Then
+        File workDir = OftpServerUtil.getUserWorkDir(nonExistentDir, userCode);
+        assertTrue(workDir.exists(), "Work directory should be created if it does not exist");
+    }
+
 }

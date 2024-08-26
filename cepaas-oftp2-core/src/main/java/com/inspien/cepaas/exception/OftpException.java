@@ -12,13 +12,13 @@ public class OftpException extends RuntimeException {
     public OftpException(ErrorCode errorCode) {
         super(errorCode.getDetail());
         this.errorCode = errorCode;
-        this.message = null;
+        this.message = errorCode.getDetail();
     }
 
     public OftpException(ErrorCode errorCode, String message) {
         super(errorCode.getDetail() + ": " + message);
         this.errorCode = errorCode;
-        this.message = message;
+        this.message = errorCode.getDetail() + message;
     }
 
 }
