@@ -111,7 +111,7 @@ public class OftpServerManager implements IOftpServerManager {
             stopServer();
             startServer();
         } catch (Exception e) {
-            logger.error("Error while restarting server", e);
+            throw new OftpException(ErrorCode.INVALID_SERVER_SETTING);
         }
     }
 
@@ -171,7 +171,7 @@ public class OftpServerManager implements IOftpServerManager {
                     customConfig.load(new FileInputStream(configFile));
                     customConfig.setup(session);
                 } catch (IOException e) {
-                    logger.error("Failed to configure session", e);
+                    throw new OftpException(ErrorCode.INVALID_SERVER_SETTING, e.getMessage());
                 }
             }
         });
@@ -190,7 +190,7 @@ public class OftpServerManager implements IOftpServerManager {
             writer.write("dataExchangeBuffer=" + dataExchangeBuffer + System.lineSeparator());
             writer.write("window=" + window + System.lineSeparator());
         } catch (IOException e) {
-            logger.error("Failed to save configuration to file", e);
+            throw new OftpException(ErrorCode.INVALID_FILE, e.getMessage());
         }
         return configFile;
     }

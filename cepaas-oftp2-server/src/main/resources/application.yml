@@ -15,19 +15,41 @@ oftpserver:
   keystorePassword : "#*.cloudedi.net@"
   ssid : NH_SSID
   password : NHPASS
-  partnerkeys:
-  - partnerName: MENDELSON_SSID
-    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
-    partnerKeystorePassword: "#*.cloudedi.net@"
-  - partnerName: mendelson1
-    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
-    partnerKeystorePassword: "#*.cloudedi.net@"
-  - partnerName: mendelson2
-    partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
-    partnerKeystorePassword: "#*.cloudedi.net@"
+  partners:
+  - partnerId: MENDELSON_SSID
+    partnerKey:
+      partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+      partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
+      partnerKeystorePassword: "#*.cloudedi.net@"
+    payload:
+      encrytYn: false
+      signYn: false
+      compressYn: false
+    outbound:
+      messageBoxId: 691650f0-b19e-11ed-9d18-0242ac130002
+      messageSlotId: 90aaabea-b1c3-11ed-b586-0242ac130000
+      endPoint: http://localhost:8181
+    inbound:
+      messageBoxId: 691650f0-b19e-11ed-9d18-0242ac130002
+      messageSlotId: b0818ecb-b1c3-11ed-b586-0242ac130002
+      endPoint: http://localhost:8181
+  - partnerId: MENDELSON_SSID_1
+    partnerKey:
+      partnerSignCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+      partnerKeystorePath: cepaas-oftp2-server/src/main/resources/keys/priv.jks
+      partnerKeystorePassword: "#*.cloudedi.net@"
+    payload:
+      encrytYn: false
+      signYn: false
+      compressYn: false
+    outbound:
+      OutBoundMessageBoxId: 1111
+      OutBoundmessageSlotId: 1111
+      endPoint: http://localhost
+    inbound:
+      inBoundMessageBoxId: 1111
+      inBoundmessageSlotId: 1111
+      endPoint: http://localhost
 
 
 # oftpclient:

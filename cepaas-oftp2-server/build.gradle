@@ -11,6 +11,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+    implementation 'com.inspien.cepaas:cepaas-msgbox-api:1.0.0-SNAPSHOT'
+
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

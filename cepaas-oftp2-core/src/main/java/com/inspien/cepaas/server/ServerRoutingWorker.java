@@ -12,6 +12,8 @@ import org.neociclo.odetteftp.util.IoUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.inspien.cepaas.enums.ErrorCode;
+import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.util.OftpServerUtil;
 
 class ServerRoutingWorker {
@@ -44,15 +46,14 @@ class ServerRoutingWorker {
             File destFile = new File(destDir, filename);
 
             if (destFile.exists()) {
-                LOGGER.warn("Delivery failed. Duplicate file in recipient mailbox. This is a simple server " +
-                        "implementation and it doesn't support delivery retries. Overwriting file: {}", destFile);
+                throw new OftpException(ErrorCode.CONFLICT_FILE);
             }
 
             try {
                 IoUtil.move(sourceFile, destFile);
                 LOGGER.info("Delivered to [{}]: {}", recipientOid, obj);
             } catch (IOException e) {
-                LOGGER.error("Delivery failed. Cannot move object file to the recipient box [{}]. Source File: {}", recipientOid, sourceFile);
+                throw new OftpException(ErrorCode.CONFLICT_FILE, recipientOid+sourceFile);
             }
         }
 
@@ -83,11 +84,6 @@ class ServerRoutingWorker {
     public void deliver(File baseDir, String userCode, OdetteFtpObject obj) {
         MakeDeliveryTask task = new MakeDeliveryTask(baseDir, userCode, obj);
         executor.submit(task);
-    }
-
-	// 테스트 전용 메서드 추가
-    void awaitCompletion(long timeout, TimeUnit unit) throws InterruptedException {
-        executor.awaitTermination(timeout, unit);
     }
 	
 }

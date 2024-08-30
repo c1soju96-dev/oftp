@@ -1,10 +1,13 @@
 package com.inspien.cepaas.util;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import org.neociclo.odetteftp.protocol.OdetteFtpObject;
 import org.neociclo.odetteftp.protocol.VirtualFile;
@@ -160,5 +163,46 @@ public class OftpServerUtil {
             }
         }
     }
+
+    public static Object loadSerializableObject(File input) throws IOException {
+        Object obj = null;
+        try(FileInputStream stream = new FileInputStream(input);
+            ObjectInputStream os = new ObjectInputStream(stream);){
+            obj = os.readObject();
+        } catch (ClassNotFoundException e) {
+            logger.error("Cannot load Odette FTP Object file: " + input, e);
+        }
+        return obj;
+    }
+
+    public static void fileMove(File sourceFile, File destFile) throws IOException {
+        try {
+            Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            Files.delete(sourceFile.toPath());
+            logger.info("File moved successfully from {} to {}", sourceFile.getAbsolutePath(), destFile.getAbsolutePath());
+        } catch (IOException e) {
+            throw new IOException("Failed to move file: " + sourceFile.getAbsolutePath(), e);
+        }
+    }
+
+    public static byte[] fileToByteArray(File file, boolean isBase64Encode, String sourceEncoding) throws IOException {
+		byte[] bArray = new byte[(int) file.length()];
+		try(FileInputStream fis = new FileInputStream(file)){
+			int readByte = fis.read(bArray);
+			if(readByte != bArray.length){
+				throw new IOException("Failed to read file: " + file + "\nRead byte: " + readByte + ", File length: " + bArray.length);
+			}
+		}
+		if (isBase64Encode) {
+			return Base64.getEncoder().encode(bArray);
+		}else{
+			if (sourceEncoding.isEmpty() || sourceEncoding.equals("UTF-8")){
+				return bArray;
+			}
+			String str = new String(bArray, sourceEncoding);
+			return str.getBytes(StandardCharsets.UTF_8);
+		}
+	}
+    
 
 }

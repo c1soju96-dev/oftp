@@ -1,20 +1,20 @@
 package com.inspien.cepaas;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.inspien.cepaas.config.OftpServerProperties;
+import com.inspien.cepaas.enums.ErrorCode;
+import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.server.IOftpServerManager;
 import com.inspien.cepaas.server.OftpServerManager;
 
 @SpringBootApplication
+@EnableScheduling
 public class OftpServerApplication {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(OftpServerApplication.class);
 
     public static void main(String[] args) {
         SpringApplication.run(OftpServerApplication.class, args);
@@ -26,14 +26,14 @@ public class OftpServerApplication {
             try {
                 serverManager.startServer();
             } catch (Exception e) {
-                LOGGER.error("Failed to start OFTP2 server.", e);
+                throw new OftpException(ErrorCode.INVALID_SERVER_SETTING);
             }
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
                     serverManager.stopServer();
                 } catch (Exception e) {
-                    LOGGER.error("Failed to stop OFTP2 server", e);
+                    throw new OftpException(ErrorCode.INVALID_SERVER_SETTING);
                 }
             }));
         };
