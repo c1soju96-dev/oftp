@@ -4,6 +4,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.inspien.cepaas.config.OftpServerProperties;
@@ -14,6 +15,7 @@ import com.inspien.cepaas.server.OftpServerManager;
 
 @SpringBootApplication
 @EnableScheduling
+@EnableAspectJAutoProxy
 public class OftpServerApplication {
 
     public static void main(String[] args) {

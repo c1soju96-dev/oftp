@@ -149,4 +149,5 @@ public class MessageBoxClient implements AutoCloseable {
         if (params != null) params.forEach(uri::addParameter);
         return uri.build();
     }
+
 }

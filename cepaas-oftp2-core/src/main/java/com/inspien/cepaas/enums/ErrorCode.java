@@ -35,11 +35,14 @@ public enum ErrorCode {
 
     // SEVER (500)
     REQUEST_FAILED("O501", "Request failed"),
-    RESPONSE_NOT_SUCCESS("O502", "Response Not Success.");
+    RESPONSE_NOT_SUCCESS("O502", "Response Not Success."),
 
     /* Service */
+    EMPTY_PAYLOAD_ERROR("S101", "Empty payload Error."),
 
     /* Client */
+    PAYLOAD_ENCODING_ERROR("C101", "Payload is invalid."),
+    MBOX_CLIENT_ERROR("C501", "Message Box Client Error.");
 
     private final String code;
     private final String detail;

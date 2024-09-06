@@ -20,47 +20,35 @@ public class OftpServerProperties {
     private String keystorePassword;
     private String ssid;
     private String password;
-    private List<Partner> partners;
+    private List<PhysicalPartner> physicalPartners;
+    private List<LogicalPartner> logicalPartners;
 
     @Getter
     @Setter
-    public static class Partner {
-        private String partnerId;
-        private PartnerKey partnerKey;
-        private Payload payload;
-        private Outbound outbound;
-        private Inbound inbound;
+    public static class PhysicalPartner {
+        private String partnerSsId;
+        private String hostName;
+        private int partnerIpPort;
+        private boolean partnerSslYn;
+        private String partnerSslCertPath;
     }
 
     @Getter
     @Setter
-    public static class PartnerKey {
-        private String partnerSignCertPath;
-        private String partnerKeystorePath;
-        private String partnerKeystorePassword;
-    }
-
-    @Getter
-    @Setter
-    public static class Payload {
-        private boolean encrytYn;
-        private boolean signYn;
-        private boolean compressYn;
-    }
-
-    @Getter
-    @Setter
-    public static class Outbound {
+    public static class LogicalPartner {
+        private String partnerSsId;
+        private String partnerSfId;
+        private String partnerFileEncryptCertPath;
+        private String partnerFileSigningCertPath;
+        private String partnerEerpSigningCertPath;
         private String messageBoxId;
-        private String messageSlotId;
-        private String endPoint;
-    }
-
-    @Getter
-    @Setter
-    public static class Inbound {
-        private String messageBoxId;
-        private String messageSlotId;
-        private String endPoint;
+        private String messageBoxEndPoint;
+        private String outBoundSlotId;
+        private String inBoundSlotId;
+        private String charEncoding;
+        private boolean signedEerpRequestYn;
+        private boolean fileCompressionYn;
+        private boolean fileEncryptionYn;
+        private boolean fileSignYn;
     }
 }

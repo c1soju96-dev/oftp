@@ -12,10 +12,6 @@ java {
 
 subprojects {
     apply plugin: 'java'
-    
-    // repositories {
-    //     mavenCentral()
-    // }
     repositories {
         maven {
             url 'http://inspien.iptime.org:9901/repository/cepaas'

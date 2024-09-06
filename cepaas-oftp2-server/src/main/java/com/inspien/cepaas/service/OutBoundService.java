@@ -37,7 +37,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class OutBoundService {
 
     private static final Logger logger = LoggerFactory.getLogger(OutBoundService.class);
-    private static final String ssId = "MENDELSON_SSID";
     private final OftpServerProperties oftpServerProperties;
     private final ConcurrentLinkedQueue<File> fileQueue = new ConcurrentLinkedQueue<>();
 
@@ -57,6 +56,7 @@ public class OutBoundService {
     }
 
     private void enqueueFiles() {
+        //TODO Outbound mbox를 가지고 있는 SFID들에 대해 로직 수행
         File directory = new File(oftpServerProperties.getBaseDirectory() + "/MENDELSON_SSID/work");
         if (directory.exists() && directory.isDirectory()) {
             File[] files = directory.listFiles();
@@ -78,10 +78,11 @@ public class OutBoundService {
     private void processAndSendFile(File file) {
         try {
             OdetteFtpObject odetteFtpObject = (OdetteFtpObject) OftpServerUtil.loadSerializableObject(file);
-            OftpServerProperties.Partner partner = findPartnerBySsId(ssId);
+            OftpServerProperties.LogicalPartner logicalPartner;
             if (odetteFtpObject instanceof VirtualFile) {
                 VirtualFile virtualFile = (VirtualFile) odetteFtpObject;
                 File dataFile = virtualFile.getFile();
+                logicalPartner = findPartnerBySsId(virtualFile.getDestination());
                 Map<String, String> customUserField = new HashMap<>();
                 customUserField.put("oftp-dataSetName", virtualFile.getDatasetName());
                 customUserField.put("oftp-dateTime", new SimpleDateFormat("yyyyMMddHHmmss").format(virtualFile.getDateTime()));
@@ -90,27 +91,28 @@ public class OutBoundService {
                 if (vf.getSecurityLevel() == SecurityLevel.ENCRYPTED || vf.getSecurityLevel() == SecurityLevel.ENCRYPTED_AND_SIGNED) {
                     File deEnvelopFile = new File(dataFile.getParent(), "decrypted_" + dataFile.getName());
                     Keystore keystore = new Keystore(oftpServerProperties.getKeystorePath(), oftpServerProperties.getKeystorePassword().toCharArray());
-                    OdetteFtpSupport.parseEnvelopedFile(dataFile, deEnvelopFile, vf, keystore.getCertificate(), keystore.getPrivateKey(), SecurityUtil.openCertificate(new File(partner.getPartnerKey().getPartnerSignCertPath())));
-                    storeMessage(partner.getOutbound().getMessageBoxId(), partner.getOutbound().getMessageSlotId(), partner.getOutbound().getEndPoint(), 
+                    OdetteFtpSupport.parseEnvelopedFile(dataFile, deEnvelopFile, vf, keystore.getCertificate(), keystore.getPrivateKey(), SecurityUtil.openCertificate(new File(logicalPartner.getPartnerFileSigningCertPath())));
+                    storeMessage(logicalPartner.getMessageBoxId(), logicalPartner.getOutBoundSlotId(), logicalPartner.getMessageBoxEndPoint(), 
                         OftpMetaInfo.of(virtualFile), OftpServerUtil.fileToByteArray(deEnvelopFile, false, ""), customUserField, MessageStatus.TBDL);
                         moveFileToProcessedFileFolder(deEnvelopFile);
                 } else {
-                    storeMessage(partner.getOutbound().getMessageBoxId(), partner.getOutbound().getMessageSlotId(), partner.getOutbound().getEndPoint(),
+                    storeMessage(logicalPartner.getMessageBoxId(), logicalPartner.getOutBoundSlotId(), logicalPartner.getMessageBoxEndPoint(),
                         OftpMetaInfo.of(virtualFile), OftpServerUtil.fileToByteArray(dataFile, false, ""), customUserField, MessageStatus.TBDL);
                 }
                 logger.info("Message stored:{}",dataFile.getName());
                 moveFileToProcessedFileFolder(dataFile);
                 moveFileToProcessedFileFolder(file);
             }
+            //TODO notification 필요
         } catch (Exception e) {
             moveFileToExceptionFolder(file);
             logger.error("Failed to process and send file: {}. Moving to exception folder.", file.getName(), e);
         }
     }
 
-    private OftpServerProperties.Partner findPartnerBySsId(String ssId) {
-        return oftpServerProperties.getPartners().stream()
-                .filter(partner -> ssId.equals(partner.getPartnerId()))
+    private OftpServerProperties.LogicalPartner findPartnerBySsId(String sfId) {
+        return oftpServerProperties.getLogicalPartners().stream()
+                .filter(partner -> sfId.equals(partner.getPartnerSfId()))
                 .findFirst()
                 .orElse(null);
     }
