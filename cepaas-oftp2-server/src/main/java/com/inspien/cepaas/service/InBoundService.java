@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.neociclo.odetteftp.OdetteFtpException;
@@ -36,7 +37,7 @@ import org.springframework.stereotype.Service;
 import com.inspien.cepaas.auth.Keystore;
 import com.inspien.cepaas.client.MessageBoxClient;
 import com.inspien.cepaas.config.OftpServerProperties;
-import com.inspien.cepaas.config.OftpServerProperties.LogicalPartner;
+import com.inspien.cepaas.config.OftpServerProperties.PhysicalPartner;
 import com.inspien.cepaas.enums.ErrorCode;
 import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.msgbox.api.MessageRecord;
@@ -53,6 +54,7 @@ public class InBoundService {
     private final OftpServerProperties oftpServerProperties;
     private final ConcurrentLinkedQueue<MessageRecordWithAttachment> messageQueue = new ConcurrentLinkedQueue<>();
     private static final String REMOTE_SFID = "MENDELSON_SFID";
+    //PhysicalPartner physicalPartner = properties.findHomePartner();
 
     public InBoundService(OftpServerProperties oftpServerProperties) {
         this.oftpServerProperties = oftpServerProperties;
@@ -71,9 +73,9 @@ public class InBoundService {
 
     private void enqueueMessages() {
         try {
-            // Inbound mbox를 가지고 있는 SFID들에 대해 로직 수행
-            LogicalPartner logicalPartner = findPartnerBySfId(REMOTE_SFID);
-            List<MessageRecordWithAttachment> messages = getWaitMessageList(logicalPartner.getInBoundSlotId(), logicalPartner.getMessageBoxEndPoint());
+            // TODO : Remote SSID에 SFID들의 Inbound mbox들에 대해 로직을 수행해야 함.
+            PhysicalPartner.LogicalPartner logicalPartner = oftpServerProperties.findLogicalPartnerBySfId(REMOTE_SFID);
+            List<MessageRecordWithAttachment> messages = getWaitMessageList(logicalPartner.getSlotId(), oftpServerProperties.getMessageBoxEndPoint());
             messageQueue.addAll(messages);
         } catch (Exception e) {
             logger.error("Failed to enqueue messages", e);
@@ -84,17 +86,18 @@ public class InBoundService {
         while (!messageQueue.isEmpty()) {
             MessageRecordWithAttachment message = messageQueue.poll();
             if (message != null) {
-                processAndSendMessage(message, oftpServerProperties.getSsid());
+                processAndSendMessage(message);
             }
         }
     }
 
-    private void processAndSendMessage(MessageRecord message, String localSsId) {
+    private void processAndSendMessage(MessageRecord message) {
         try {
             // 1. File 생성
-            LogicalPartner logicalPartner = findPartnerBySfId(REMOTE_SFID);
+            PhysicalPartner physicalHomePartner = oftpServerProperties.findHomePartner();
+            PhysicalPartner.LogicalPartner logicalPartner = oftpServerProperties.findLogicalPartnerBySfId(REMOTE_SFID);
 
-            String data = getPayloadFromMessageBox(message, logicalPartner.getMessageBoxEndPoint());
+            String data = getPayloadFromMessageBox(message, oftpServerProperties.getMessageBoxEndPoint());
 
             if(data.isEmpty()){
                 throw new OftpException(ErrorCode.EMPTY_PAYLOAD_ERROR);
@@ -103,37 +106,42 @@ public class InBoundService {
             String datasetName = message.getMessageType();
             String localSfId = message.getSenderId();
             if(localSfId.isEmpty()){
-                localSfId = localSsId;
+                localSfId = physicalHomePartner.getSsId();
+            }
+            if("-".equals(datasetName)){
+                StringBuilder sb = new StringBuilder();
+                sb.append(UUID.randomUUID().toString());
+                datasetName = sb.toString();
             }
 
-            File dataFile = createDataFile(oftpServerProperties.getBaseDirectory(), logicalPartner.getPartnerSsId(), logicalPartner.getPartnerSfId(), payload, datasetName);
+            File dataFile = createDataFile(oftpServerProperties.getBaseDirectory(), logicalPartner.getSsId(), logicalPartner.getSfId(), payload, datasetName);
             boolean isEnveloped = logicalPartner.isFileCompressionYn() || logicalPartner.isFileSignYn() || logicalPartner.isFileCompressionYn();
             EnvelopedVirtualFile envelopedVirtualFile;
             if (isEnveloped) {
-                envelopedVirtualFile = convertEnvelopedOftpFile(dataFile, localSfId, logicalPartner.getPartnerSfId(), datasetName, logicalPartner);
+                envelopedVirtualFile = convertEnvelopedOftpFile(dataFile, localSfId, logicalPartner.getSfId(), datasetName, logicalPartner, physicalHomePartner);
             } else {
-                envelopedVirtualFile = createVirtualFile(oftpServerProperties.getBaseDirectory(), localSfId, logicalPartner.getPartnerSsId(), logicalPartner.getPartnerSfId(), dataFile);
+                envelopedVirtualFile = createVirtualFile(oftpServerProperties.getBaseDirectory(), localSfId, logicalPartner.getSsId(), logicalPartner.getSfId(), dataFile);
             }
 
-            // 2. Oftp Client 호출
+            // 3. Virtual File 저장
+            File virtualFileDir = new File(oftpServerProperties.getBaseDirectory(), String.join(File.separator, logicalPartner.getSsId(), logicalPartner.getSfId(), "outbox", "vfile"));
+            OftpServerUtil.storeVirtualFile(envelopedVirtualFile, virtualFileDir);
 
-            //File file = OftpServerUtil.createFileFromAttachment(message);
-            //OftpServerProperties.Partner partner = findPartnerBySsId(ssId);
+            // 4. oftp client 호출
+            //findGatewayBySsId(logicalPartner.getPartnerSsId());
 
-            // OFTP 클라이언트 통해 파일 전송
-            //oftpClient.sendFile(partner.getHost(), partner.getPort(), partner.getPartnerId(), partner.getPassword(), file, message.getReceiverId());
+            // 5. 성공시 mbox의 상태값을 변경하고 큐에서 제거
+            messageQueue.poll();
 
-            //logger.info("Message sent: {}", message.getDatasetName());
-            //moveMessageToProcessedFolder(file);
 
         } catch (Exception e) {
             messageQueue.poll();
             //moveMessageToExceptionFolder(message);
-            //logger.error("Failed to process and send message: {}. Moving to exception folder.", message.getDatasetName(), e);
+            logger.error("Failed to process and send message: {}. Moving to exception folder.", e.getMessage(), e);
         }
     }
 
-    public EnvelopedVirtualFile convertEnvelopedOftpFile(File originFile, String homeSFID, String remoteSFID, String datasetName, LogicalPartner logicalPartner) throws IOException, OdetteFtpException{
+    public EnvelopedVirtualFile convertEnvelopedOftpFile(File originFile, String homeSFID, String remoteSFID, String datasetName, PhysicalPartner.LogicalPartner logicalPartner, PhysicalPartner physicalHomePartner) throws IOException, OdetteFtpException{
         DefaultEnvelopedVirtualFile vf = new DefaultEnvelopedVirtualFile();
         vf.setOriginator(homeSFID);
         vf.setDatasetName(datasetName);
@@ -151,7 +159,7 @@ public class InBoundService {
         X509Certificate remoteCert = null;
         if(securityLevel.equals(SecurityLevel.SIGNED) || securityLevel.equals(SecurityLevel.ENCRYPTED_AND_SIGNED)){
             try {
-                Keystore keystore = new Keystore(oftpServerProperties.getKeystorePath(), oftpServerProperties.getKeystorePassword().toCharArray());                
+                Keystore keystore = new Keystore(physicalHomePartner.getKeystorePath(), physicalHomePartner.getKeystorePassword().toCharArray());                
                 homePrivateKey = keystore.getPrivateKey();
                 homeCert = SecurityUtil.getCertificateEntry(keystore.getKeyStore());
             } catch (Exception e) {
@@ -161,7 +169,7 @@ public class InBoundService {
         }
         if(securityLevel.equals(SecurityLevel.ENCRYPTED) || securityLevel.equals(SecurityLevel.ENCRYPTED_AND_SIGNED)){        
             try {
-                remoteCert = SecurityUtil.openCertificate(new File(logicalPartner.getPartnerFileSigningCertPath()));
+                remoteCert = SecurityUtil.openCertificate(new File(logicalPartner.getFileSigningCertPath()));
             } catch (Exception e) {
                 logger.error("cannot parse enveloped file. Error loading partner certificate: " + e.getMessage(), e);
                 throw new IOException("cannot parse enveloped file. Error loading partner certificate: " + e.getMessage(), e);
@@ -180,16 +188,17 @@ public class InBoundService {
     }
 
     public EnvelopedVirtualFile createVirtualFile(String baseDirectory, String localSfId, String remoteSsId, String remoteSfId, File dataFile) {
-        File remoteSfidDir = new File(baseDirectory, String.join(File.separator, remoteSsId, remoteSfId));
+        File remoteSfidDir = new File(baseDirectory, String.join(File.separator, remoteSsId, remoteSfId, "outbox"));
         String datasetName = dataFile.getName();
         String virtualFileName = createVirtualFileName(localSfId, remoteSfId, new Date(), datasetName);
         File dataDir = new File(remoteSfidDir, "data");
         try {
             FileUtil.notExistCreateDir(dataDir);
             File tempOriginData = File.createTempFile(virtualFileName + "_", null, dataDir);
-            FileUtil.fileMove(dataFile, tempOriginData);
+            OftpServerUtil.fileMove(dataFile, tempOriginData);
             return convertOftpFile(tempOriginData, localSfId, remoteSfId, datasetName);
         } catch (IOException e) {
+            logger.error("Error", e);
             throw new OftpException(ErrorCode.CONFLICT_FILE);
         }
     }
@@ -215,7 +224,7 @@ public class InBoundService {
 	}
 
     public File createDataFile(String baseDirectory, String partnerSsid, String partnerSfid, byte[] data, String dataSetName) throws IOException {
-        File partnerDirectory = new File(baseDirectory, String.join(File.separator, partnerSsid, partnerSfid));
+        File partnerDirectory = new File(baseDirectory, String.join(File.separator, partnerSsid, partnerSfid, "outbox"));
         File dataDir = new File(partnerDirectory, "org_data");
         if (!dataDir.exists()) {
             dataDir.mkdirs();
@@ -250,13 +259,6 @@ public class InBoundService {
             recordList.addAll(client.getPendingRecords(query));
         }
         return recordList;
-    }
-
-    private OftpServerProperties.LogicalPartner findPartnerBySfId(String sfId) {
-        return oftpServerProperties.getLogicalPartners().stream()
-                .filter(partner -> sfId.equals(partner.getPartnerSfId()))
-                .findFirst()
-                .orElse(null);
     }
 
 }

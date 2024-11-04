@@ -8,6 +8,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 import com.inspien.cepaas.config.OftpServerProperties;
+import com.inspien.cepaas.config.OftpServerProperties.PhysicalPartner;
 import com.inspien.cepaas.enums.ErrorCode;
 import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.server.IOftpServerManager;
@@ -43,14 +44,15 @@ public class OftpServerApplication {
 
     @Bean
     public IOftpServerManager serverManager(OftpServerProperties properties) {
+        PhysicalPartner physicalPartner = properties.findHomePartner();
         return OftpServerManager.builder()
                 .baseDirectory(properties.getBaseDirectory())
-                .tlsYn(properties.isTlsYn())
-                .port(properties.getPort())
-                .keystorePath(properties.getKeystorePath())
-                .keystorePassword(properties.getKeystorePassword())
-                .ssid(properties.getSsid())
-                .password(properties.getPassword())
+                .tlsYn(physicalPartner.isUseTls())
+                .port(physicalPartner.getPort())
+                .keystorePath(physicalPartner.getKeystorePath())
+                .keystorePassword(physicalPartner.getKeystorePassword())
+                .ssid(physicalPartner.getSsId())
+                .password(physicalPartner.getPassword())
                 .build();
     }
 }

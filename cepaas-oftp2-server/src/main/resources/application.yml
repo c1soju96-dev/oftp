@@ -9,44 +9,48 @@ server:
 
 oftpserver:
   base_directory: cepaas-oftp2-server/src/main/resources/serverdir
-  port: 16619
-  tls_yn: true
-  keystorePath : cepaas-oftp2-server/src/main/resources/keys/priv.jks
-  keystorePassword : "#*.cloudedi.net@"
-  ssid : NH_SSID
-  password : NHPASS
+  messageBoxId: 691650f0-b19e-11ed-9d18-0242ac130002
+  messageBoxEndPoint: http://localhost:8181
   physicalPartners:
-  - partnerSsId: MENDELSON_SSID
+  - ssId: NH_SSID
+    type: HOME
     hostName: localhost
-    partnerIpPort: 6619
-    partnerSslYn: true
-    partnerSslCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-  logicalPartners:
-  - partnerSfId: MENDELSON_SFID
-    partnerSsId: MENDELSON_SSID
-    partnerFileEncryptCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    partnerFileSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    partnerEerpSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
-    messageBoxId: 691650f0-b19e-11ed-9d18-0242ac130002
-    messageBoxEndPoint: http://localhost:8181
-    outBoundSlotId: 
-    inBoundSlotId: b0818ecb-b1c3-11ed-b586-0242ac130002
-    charEncoding: UTF-8
-    signedEerpRequestYn: false
-    fileCompressionYn: false
-    fileEncryptionYn: false
-    fileSignYn: false
-  - partnerSfId: NH_SFID
-    partnerSsId: NH_SSID
-    partnerFileEncryptCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
-    partnerFileSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
-    partnerEerpSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
-    messageBoxId: 691650f0-b19e-11ed-9d18-0242ac130002
-    messageBoxEndPoint: http://localhost:8181
-    outBoundSlotId: 90aaabea-b1c3-11ed-b586-0242ac130000
-    inBoundSlotId: 
-    charEncoding: UTF-8
-    signedEerpRequestYn: false
-    fileCompressionYn: false
-    fileEncryptionYn: false
-    fileSignYn: false
+    port: 16619
+    useTls: true
+    password : NHPASS
+    certPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+    keystorePath : cepaas-oftp2-server/src/main/resources/keys/priv.jks
+    keystorePassword : "#*.cloudedi.net@"
+    logicalPartners:
+    - ssId: NH_SSID
+      sfId: NH_SFID
+      fileEncryptCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
+      fileSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
+      eerpSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/inspien.cer
+      slotId: 90aaabea-b1c3-11ed-b586-0242ac130000
+      charEncoding: UTF-8
+      signedEerpRequestYn: false
+      fileCompressionYn: false
+      fileEncryptionYn: false
+      fileSignYn: false
+  - ssId: MENDELSON_SSID
+    type: REMOTE
+    hostName: localhost
+    port: 3307
+    useTls: false
+    password : NHPASS
+    certPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+    keystorePath : cepaas-oftp2-server/src/main/resources/keys/priv.jks
+    keystorePassword : "#*.cloudedi.net@"
+    logicalPartners:
+    - ssId: MENDELSON_SSID
+      sfId: MENDELSON_SFID
+      fileEncryptCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+      fileSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+      eerpSigningCertPath: cepaas-oftp2-server/src/main/resources/keys/mendelson_key.cer
+      slotId: b0818ecb-b1c3-11ed-b586-0242ac130002
+      charEncoding: UTF-8
+      signedEerpRequestYn: false
+      fileCompressionYn: false
+      fileEncryptionYn: false
+      fileSignYn: false

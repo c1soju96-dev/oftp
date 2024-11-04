@@ -3,6 +3,8 @@ package com.inspien.cepaas.util;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,9 +26,12 @@ public class FileUtil {
         }
     }
 
-    public static void fileMove(File dataFile, File tempOriginData) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'fileMove'");
+    public static void fileMove(File file, File tempOriginData) throws IOException {
+        try {
+            Files.move(file.toPath(), tempOriginData.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            throw new IOException("Cannot create directory: " + file.getAbsolutePath());
+        }
     }
     
 }

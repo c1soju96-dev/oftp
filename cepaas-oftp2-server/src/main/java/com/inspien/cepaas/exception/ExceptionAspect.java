@@ -20,7 +20,7 @@ public class ExceptionAspect {
             logger.error("An unexpected error occurred: {}", e.getMessage());
         }
     }
-    @AfterThrowing(pointcut = "execution(* com.inspien.cepaas.service..*(..))", throwing = "e")
+    @AfterThrowing(pointcut = "execution(* com.inspien.cepaas.server..*(..))", throwing = "e")
     public void handleSchedulerException(Throwable e) {
         if (e instanceof OftpException) {
             OftpException oftpException = (OftpException) e;

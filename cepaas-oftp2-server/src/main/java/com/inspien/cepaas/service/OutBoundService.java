@@ -7,6 +7,7 @@ import com.inspien.cepaas.auth.Keystore;
 import com.inspien.cepaas.client.MessageBoxClient;
 import com.inspien.cepaas.client.OftpMetaInfo;
 import com.inspien.cepaas.config.OftpServerProperties;
+import com.inspien.cepaas.config.OftpServerProperties.PhysicalPartner;
 import com.inspien.cepaas.enums.ErrorCode;
 import com.inspien.cepaas.exception.OftpException;
 import com.inspien.cepaas.msgbox.api.MessageDirection;
@@ -78,11 +79,12 @@ public class OutBoundService {
     private void processAndSendFile(File file) {
         try {
             OdetteFtpObject odetteFtpObject = (OdetteFtpObject) OftpServerUtil.loadSerializableObject(file);
-            OftpServerProperties.LogicalPartner logicalPartner;
+            PhysicalPartner.LogicalPartner logicalPartner;
+            PhysicalPartner physicalHomePartner = oftpServerProperties.findHomePartner();
             if (odetteFtpObject instanceof VirtualFile) {
                 VirtualFile virtualFile = (VirtualFile) odetteFtpObject;
                 File dataFile = virtualFile.getFile();
-                logicalPartner = findPartnerBySsId(virtualFile.getDestination());
+                logicalPartner = oftpServerProperties.findLogicalPartnerBySfId(virtualFile.getDestination());
                 Map<String, String> customUserField = new HashMap<>();
                 customUserField.put("oftp-dataSetName", virtualFile.getDatasetName());
                 customUserField.put("oftp-dateTime", new SimpleDateFormat("yyyyMMddHHmmss").format(virtualFile.getDateTime()));
@@ -90,13 +92,13 @@ public class OutBoundService {
                 EnvelopedVirtualFile vf = (EnvelopedVirtualFile) virtualFile;
                 if (vf.getSecurityLevel() == SecurityLevel.ENCRYPTED || vf.getSecurityLevel() == SecurityLevel.ENCRYPTED_AND_SIGNED) {
                     File deEnvelopFile = new File(dataFile.getParent(), "decrypted_" + dataFile.getName());
-                    Keystore keystore = new Keystore(oftpServerProperties.getKeystorePath(), oftpServerProperties.getKeystorePassword().toCharArray());
-                    OdetteFtpSupport.parseEnvelopedFile(dataFile, deEnvelopFile, vf, keystore.getCertificate(), keystore.getPrivateKey(), SecurityUtil.openCertificate(new File(logicalPartner.getPartnerFileSigningCertPath())));
-                    storeMessage(logicalPartner.getMessageBoxId(), logicalPartner.getOutBoundSlotId(), logicalPartner.getMessageBoxEndPoint(), 
+                    Keystore keystore = new Keystore(physicalHomePartner.getKeystorePath(), physicalHomePartner.getKeystorePassword().toCharArray());
+                    OdetteFtpSupport.parseEnvelopedFile(dataFile, deEnvelopFile, vf, keystore.getCertificate(), keystore.getPrivateKey(), SecurityUtil.openCertificate(new File(logicalPartner.getFileSigningCertPath())));
+                    storeMessage(oftpServerProperties.getMessageBoxId(), logicalPartner.getSlotId(), oftpServerProperties.getMessageBoxEndPoint(), 
                         OftpMetaInfo.of(virtualFile), OftpServerUtil.fileToByteArray(deEnvelopFile, false, ""), customUserField, MessageStatus.TBDL);
                         moveFileToProcessedFileFolder(deEnvelopFile);
                 } else {
-                    storeMessage(logicalPartner.getMessageBoxId(), logicalPartner.getOutBoundSlotId(), logicalPartner.getMessageBoxEndPoint(),
+                    storeMessage(oftpServerProperties.getMessageBoxId(), logicalPartner.getSlotId(), oftpServerProperties.getMessageBoxEndPoint(),
                         OftpMetaInfo.of(virtualFile), OftpServerUtil.fileToByteArray(dataFile, false, ""), customUserField, MessageStatus.TBDL);
                 }
                 logger.info("Message stored:{}",dataFile.getName());
@@ -108,13 +110,6 @@ public class OutBoundService {
             moveFileToExceptionFolder(file);
             logger.error("Failed to process and send file: {}. Moving to exception folder.", file.getName(), e);
         }
-    }
-
-    private OftpServerProperties.LogicalPartner findPartnerBySsId(String sfId) {
-        return oftpServerProperties.getLogicalPartners().stream()
-                .filter(partner -> sfId.equals(partner.getPartnerSfId()))
-                .findFirst()
-                .orElse(null);
     }
 
     private void moveFileToExceptionFolder(File file) {

@@ -63,9 +63,20 @@ public class MessageBoxClient implements AutoCloseable {
         return executePostRequest(GET_PENDING_RECORDS_PATH, query, new TypeReference<List<MessageRecordWithAttachment>>() {});
     }
 
-    public byte[] getPayload(String msgboxId, String slotId, String msgId) {
+    // public byte[] getPayload(String msgboxId, String slotId, String msgId) {
+    //     MessagePayloadPullRequest req = new MessagePayloadPullRequest(msgboxId, slotId, msgId);
+    //     return executePostRequest(GET_PAYLOAD_PATH, req, byte[].class);
+    // }
+
+    public byte[] getPayload(String msgboxId, String slotId, String msgId) throws Exception {
         MessagePayloadPullRequest req = new MessagePayloadPullRequest(msgboxId, slotId, msgId);
-        return executePostRequest(GET_PAYLOAD_PATH, req, byte[].class);
+        HttpPost post = new HttpPost(getUri(endpoint, "/msgbox/ngin/rest/payload/get"));
+        post.setEntity(new StringEntity(mapper.writeValueAsString(req), ContentType.APPLICATION_JSON));
+        HttpResponse resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() == 200)
+            return IOUtil.readFully(resp.getEntity().getContent());
+        else
+            throw new Exception(resp.getStatusLine().getReasonPhrase());
     }
 
     public void updateMessageStatus(MessageRecordWithAttachment request) {

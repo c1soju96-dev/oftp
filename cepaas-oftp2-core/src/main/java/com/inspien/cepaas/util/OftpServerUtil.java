@@ -27,6 +27,9 @@ import org.neociclo.odetteftp.util.ProtocolUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.inspien.cepaas.enums.ErrorCode;
+import com.inspien.cepaas.exception.OftpException;
+
 public class OftpServerUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(OftpServerUtil.class);
@@ -187,13 +190,21 @@ public class OftpServerUtil {
         return obj;
     }
 
-    public static void fileMove(File sourceFile, File destFile) throws IOException {
+    // public static void fileMove(File sourceFile, File destFile) throws IOException {
+    //     try {
+    //         Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    //         Files.delete(sourceFile.toPath());
+    //         logger.info("File moved successfully from {} to {}", sourceFile.getAbsolutePath(), destFile.getAbsolutePath());
+    //     } catch (IOException e) {
+    //         throw new IOException("Failed to move file: " + sourceFile.getAbsolutePath(), e);
+    //     }
+    // }
+
+    public static void fileMove(File file, File tempOriginData) throws IOException {
         try {
-            Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            Files.delete(sourceFile.toPath());
-            logger.info("File moved successfully from {} to {}", sourceFile.getAbsolutePath(), destFile.getAbsolutePath());
+            Files.move(file.toPath(), tempOriginData.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            throw new IOException("Failed to move file: " + sourceFile.getAbsolutePath(), e);
+            throw new IOException("Cannot create directory: " + file.getAbsolutePath());
         }
     }
 
@@ -217,113 +228,127 @@ public class OftpServerUtil {
 	}
 
     public static void createEnvelopedFile(File input, File output, EnvelopedVirtualFile virtualFile) throws EnvelopingException {
-      createEnvelopedFile(input, output, virtualFile, (X509Certificate)null, (PrivateKey)null, (X509Certificate)null);
-   }
+        createEnvelopedFile(input, output, virtualFile, (X509Certificate)null, (PrivateKey)null, (X509Certificate)null);
+    }
 
-   public static void createEnvelopedFile(File input, File output, EnvelopedVirtualFile virtualFile, X509Certificate userCert, PrivateKey userPrivateKey, X509Certificate partnerCert) throws EnvelopingException {
-      SecurityLevel securityLevel = virtualFile.getSecurityLevel() == null ? SecurityLevel.NO_SECURITY_SERVICES : virtualFile.getSecurityLevel();
-      CipherSuite cipherSel = virtualFile.getCipherSuite() == null ? CipherSuite.NO_CIPHER_SUITE_SELECTION : virtualFile.getCipherSuite();
-      FileCompression compressionAlgo = virtualFile.getCompressionAlgorithm() == null ? FileCompression.NO_COMPRESSION : virtualFile.getCompressionAlgorithm();
-      FileEnveloping envelopingFormat = virtualFile.getEnvelopingFormat() == null ? FileEnveloping.NO_ENVELOPE : virtualFile.getEnvelopingFormat();
-      createEnvelopedFile(input, output, securityLevel, cipherSel, compressionAlgo, envelopingFormat, partnerCert, userCert, userPrivateKey);
+    public static void createEnvelopedFile(File input, File output, EnvelopedVirtualFile virtualFile, X509Certificate userCert, PrivateKey userPrivateKey, X509Certificate partnerCert) throws EnvelopingException {
+        SecurityLevel securityLevel = virtualFile.getSecurityLevel() == null ? SecurityLevel.NO_SECURITY_SERVICES : virtualFile.getSecurityLevel();
+        CipherSuite cipherSel = virtualFile.getCipherSuite() == null ? CipherSuite.NO_CIPHER_SUITE_SELECTION : virtualFile.getCipherSuite();
+        FileCompression compressionAlgo = virtualFile.getCompressionAlgorithm() == null ? FileCompression.NO_COMPRESSION : virtualFile.getCompressionAlgorithm();
+        FileEnveloping envelopingFormat = virtualFile.getEnvelopingFormat() == null ? FileEnveloping.NO_ENVELOPE : virtualFile.getEnvelopingFormat();
+        createEnvelopedFile(input, output, securityLevel, cipherSel, compressionAlgo, envelopingFormat, partnerCert, userCert, userPrivateKey);
    }
 
    public static void createEnvelopedFile(File input, File output, SecurityLevel securityLevel, CipherSuite cipherSel, FileCompression compressionAlgo, FileEnveloping envelopingFormat, X509Certificate partnerCert, X509Certificate userCert, PrivateKey userPrivateKey) throws EnvelopingException {
-      String[] argNames = new String[]{"input", "output", "securityLevel", "cipherSel", "compressionAlgo", "envelopingFormat"};
-      Object[] argValues = new Object[]{input, output, securityLevel, cipherSel, compressionAlgo, envelopingFormat};
+        String[] argNames = new String[]{"input", "output", "securityLevel", "cipherSel", "compressionAlgo", "envelopingFormat"};
+        Object[] argValues = new Object[]{input, output, securityLevel, cipherSel, compressionAlgo, envelopingFormat};
 
-      for(int i = 0; i < argValues.length; ++i) {
-         if (argValues[i] == null) {
-            throw new NullPointerException(argNames[i]);
-         }
-      }
-
-      if (envelopingFormat == FileEnveloping.NO_ENVELOPE) {
-         throw new EnvelopingException("Cannot parse enveloped file. Incompatible parameter: envelopingFormat=NO_ENVELOPE.");
-      } else {
-         boolean isSigned = securityLevel == SecurityLevel.SIGNED || securityLevel == SecurityLevel.ENCRYPTED_AND_SIGNED;
-         boolean isEncrypted = securityLevel == SecurityLevel.ENCRYPTED || securityLevel == SecurityLevel.ENCRYPTED_AND_SIGNED;
-         boolean isCompressed = compressionAlgo != FileCompression.NO_COMPRESSION;
-         if (isSigned) {
-            if (cipherSel == CipherSuite.NO_CIPHER_SUITE_SELECTION) {
-               throw new EnvelopingException("Cannot parse enveloped file. No signature algorithm specified (cipherSel=NO_CIPHER_SUITE_SELECTION).");
+        for(int i = 0; i < argValues.length; ++i) {
+            if (argValues[i] == null) {
+                throw new NullPointerException(argNames[i]);
             }
+        }
 
-            if (userCert == null) {
-               throw new NullPointerException("userCert");
-            }
-
-            if (userPrivateKey == null) {
-               throw new NullPointerException("userKey");
-            }
-         }
-
-         if (isEncrypted) {
-            if (cipherSel == CipherSuite.NO_CIPHER_SUITE_SELECTION) {
-               throw new EnvelopingException("Cannot parse enveloped file. No encryption algorithm specified (cipherSel=NO_CIPHER_SUITE_SELECTION).");
-            }
-
-            if (partnerCert == null) {
-               throw new NullPointerException("partnerCert");
-            }
-         }
-
-         OutputStream outStream = null;
-
-         try {
-            outStream = new FileOutputStream(output, false);
-         } catch (FileNotFoundException var21) {
-            throw new EnvelopingException("Failed to create enveloped file. Cannot open output file: " + output, var21);
-         }
-
-         ArrayList<OutputStream> toClose = new ArrayList();
-         toClose.add(outStream);
-
-         try {
-            if (isEncrypted) {
-               outStream = EnvelopingUtil.openEnvelopedDataStreamGenerator((OutputStream)outStream, cipherSel, partnerCert);
-               toClose.add(0, outStream);
-            }
-
-            if (isCompressed) {
-               outStream = EnvelopingUtil.openCompressedDataStreamGenerator((OutputStream)outStream);
-               toClose.add(0, outStream);
-            }
-
+        if (envelopingFormat == FileEnveloping.NO_ENVELOPE) {
+            throw new EnvelopingException("Cannot parse enveloped file. Incompatible parameter: envelopingFormat=NO_ENVELOPE.");
+        } else {
+            boolean isSigned = securityLevel == SecurityLevel.SIGNED || securityLevel == SecurityLevel.ENCRYPTED_AND_SIGNED;
+            boolean isEncrypted = securityLevel == SecurityLevel.ENCRYPTED || securityLevel == SecurityLevel.ENCRYPTED_AND_SIGNED;
+            boolean isCompressed = compressionAlgo != FileCompression.NO_COMPRESSION;
             if (isSigned) {
-               outStream = EnvelopingUtil.openSignedDataStreamGenerator((OutputStream)outStream, cipherSel, userCert, userPrivateKey);
-               toClose.add(0, outStream);
+                if (cipherSel == CipherSuite.NO_CIPHER_SUITE_SELECTION) {
+                    throw new EnvelopingException("Cannot parse enveloped file. No signature algorithm specified (cipherSel=NO_CIPHER_SUITE_SELECTION).");
+                }
+                if (userCert == null) {
+                    throw new NullPointerException("userCert");
+                }
+                if (userPrivateKey == null) {
+                    throw new NullPointerException("userKey");
+                }
             }
-         } catch (Exception var23) {
-            throw new EnvelopingException("Failed to create enveloped file. Cannot open CMS output processings.", var23);
-         }
-
-         FileInputStream inStream = null;
-
-         try {
-            inStream = new FileInputStream(input);
-            IoUtil.copyStream(inStream, (OutputStream)outStream);
-         } catch (FileNotFoundException var19) {
-            throw new EnvelopingException("Failed to create enveloped file. Source file doesn't exist: " + input, var19);
-         } catch (IOException var20) {
-            throw new EnvelopingException("Failed to create enveloped file. Buffer copying error.", var20);
-         }
-
-         try {
-            inStream.close();
-            Iterator var17 = toClose.iterator();
-
-            while(var17.hasNext()) {
-               OutputStream stream = (OutputStream)var17.next();
-               stream.flush();
-               stream.close();
+            if (isEncrypted) {
+                if (cipherSel == CipherSuite.NO_CIPHER_SUITE_SELECTION) {
+                    throw new EnvelopingException("Cannot parse enveloped file. No encryption algorithm specified (cipherSel=NO_CIPHER_SUITE_SELECTION).");
+                }
+                if (partnerCert == null) {
+                    throw new NullPointerException("partnerCert");
+                }
             }
 
-         } catch (IOException var22) {
-            throw new EnvelopingException("Failed to close enveloped output stream: " + output, var22);
-         }
-      }
-   }
-    
+            OutputStream outStream = null;
+
+            try {
+                outStream = new FileOutputStream(output, false);
+            } catch (FileNotFoundException var21) {
+                throw new EnvelopingException("Failed to create enveloped file. Cannot open output file: " + output, var21);
+            }
+
+            ArrayList<OutputStream> toClose = new ArrayList();
+            toClose.add(outStream);
+
+            try {
+                if (isEncrypted) {
+                outStream = EnvelopingUtil.openEnvelopedDataStreamGenerator((OutputStream)outStream, cipherSel, partnerCert);
+                toClose.add(0, outStream);
+                }
+
+                if (isCompressed) {
+                outStream = EnvelopingUtil.openCompressedDataStreamGenerator((OutputStream)outStream);
+                toClose.add(0, outStream);
+                }
+
+                if (isSigned) {
+                outStream = EnvelopingUtil.openSignedDataStreamGenerator((OutputStream)outStream, cipherSel, userCert, userPrivateKey);
+                toClose.add(0, outStream);
+                }
+            } catch (Exception var23) {
+                throw new EnvelopingException("Failed to create enveloped file. Cannot open CMS output processings.", var23);
+            }
+
+            FileInputStream inStream = null;
+
+            try {
+                inStream = new FileInputStream(input);
+                IoUtil.copyStream(inStream, (OutputStream)outStream);
+            } catch (FileNotFoundException var19) {
+                throw new EnvelopingException("Failed to create enveloped file. Source file doesn't exist: " + input, var19);
+            } catch (IOException var20) {
+                throw new EnvelopingException("Failed to create enveloped file. Buffer copying error.", var20);
+            }
+
+            try {
+                inStream.close();
+                Iterator var17 = toClose.iterator();
+
+                while(var17.hasNext()) {
+                OutputStream stream = (OutputStream)var17.next();
+                stream.flush();
+                stream.close();
+                }
+
+            } catch (IOException var22) {
+                throw new EnvelopingException("Failed to close enveloped output stream: " + output, var22);
+            }
+        }
+    }
+
+    public static void storeVirtualFile(EnvelopedVirtualFile envelopedVirtualFile, File virtualFileDir) throws IOException {
+
+        notExistCreateDir(virtualFileDir);
+        File file = new File(virtualFileDir, envelopedVirtualFile.getDatasetName() + ".vfile");
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(file))) {
+            oos.writeObject(envelopedVirtualFile);
+            logger.info("EnvelopedVirtualFile has been saved to: {}", file.getAbsolutePath());
+        } catch (IOException e) {
+            logger.error("Failed to save EnvelopedVirtualFile: {}", file.getAbsolutePath(), e);
+            throw new OftpException(ErrorCode.FILE_MOVE_FAIL);
+        }
+    }
+
+    public static void notExistCreateDir(File file) throws IOException {
+        if (!file.exists() && !file.mkdirs()) {
+            throw new IOException("Cannot create directory: " + file.getAbsolutePath());
+        }
+    }
 
 }

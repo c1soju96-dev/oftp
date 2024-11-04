@@ -31,13 +31,13 @@ class OftpServerApplicationTest {
     @Test
     void testApplicationStartup() throws Exception {
         // Given
-        when(properties.getBaseDirectory()).thenReturn("/tmp/oftp");
-        when(properties.isTlsYn()).thenReturn(false);
-        when(properties.getPort()).thenReturn(13305);
-        when(properties.getKeystorePath()).thenReturn(null);
-        when(properties.getKeystorePassword()).thenReturn(null);
-        when(properties.getSsid()).thenReturn("SSID");
-        when(properties.getPassword()).thenReturn("password");
+        // when(properties.getBaseDirectory()).thenReturn("/tmp/oftp");
+        // when(properties.isTlsYn()).thenReturn(false);
+        // when(properties.getPort()).thenReturn(13305);
+        // when(properties.getKeystorePath()).thenReturn(null);
+        // when(properties.getKeystorePassword()).thenReturn(null);
+        // when(properties.getSsid()).thenReturn("SSID");
+        // when(properties.getPassword()).thenReturn("password");
 
         // When
         // OftpServerApplication.main(new String[] {});
